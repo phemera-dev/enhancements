@@ -309,7 +309,7 @@ Clients reside in **untrusted zones**. Every request originating from an untrust
 
 The **edge zone** accepts inbound connections from untrusted networks. Load balancer, authority endpoint and gateways MUST be located on this zone.
 
-Authority, including its data base, and workers MUST be isolated in **core zone**. Core zone MUST not be connected to untrusted zones, but MUST accept inbound connections exclusively from inside the **edge zone**.
+The authority offers an internal and an external API. The internal API MUST be isolated in **core zone** , including the database. The external authority API CAN be isolated in **core zone** by an operator behind a loadbalancer or firewall or similar component. Core zone MUST not be connected to untrusted zones, but MUST accept inbound connections exclusively from inside the **edge zone**. The exception to this is the external authority API if configured to be in the **edge zone**.
 
 Targets reached through agents MUST accept no inbound connections from Tidegate at all. Agents reside in **target network** and initiate outbound connections to the PAM on its own.
 
