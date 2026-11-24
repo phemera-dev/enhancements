@@ -248,8 +248,6 @@ Each ID belongs to one running component. This TEP doesn't define how the author
 
 ### Joining through the authority
 
-A component joins once. It shows a join token and gets its first certificate.
-
 #### Join tokens
 
 An administrator creates a join token with the CLI and names the type of component it is for. The type can't be `authority`. The authority chooses the instance at that moment, creates the component's record and shows the token once.
@@ -272,7 +270,7 @@ The component reads the token from a file. It takes its own ID and the ID prefix
 
 Then it connects to the authority. During the TLS handshake it checks the authority's certificate as described under "Accepting a certificate", with one difference: its list of trusted CA certificates isn't there yet. It uses the token's fingerprints instead. The authority's certificate has to lead to a CA certificate whose public key matches one of them, and the component verifies every signature on that path. The authority sends the whole path in the handshake, the CA certificate included. The component expects the type `authority` under the token's ID prefix.
 
-Only then does the component send two things: the token's secret part, and a certificate signing request for exactly its ID. The request proves that the component holds the private key. A token that someone puts on a component with the wrong address is never sent.
+Only then does the component send two things: the token's secret part, and a certificate signing request for exactly its ID. The request proves that the component holds the private key. A component that has a token but the wrong address for the authority never sends the token.
 
 The authority then does this in order:
 
@@ -314,7 +312,7 @@ A renewal with an older certificate and another key is the sign of a copied key:
 
 If a renewal fails for another reason, the component tries again until its certificate expires. After that it can't renew and needs a new token. A server that was switched off for longer than a certificate is valid is in the same position.
 
-The lifetime is a trade-off. A shorter one limits how long a removed component's certificate still works between other components, and it shortens sessions. A longer one lets the mesh survive a longer outage of the authority.
+A shorter lifetime limits how long a removed component's certificate still works between other components, and it shortens sessions. A longer one lets the mesh survive a longer outage of the authority.
 
 #### Removing a component
 
@@ -354,7 +352,7 @@ If a CA key is stolen, there's no gradual way. The administrator replaces the CA
 2. Every authority replica takes a new certificate from the new CA.
 3. The stolen CA leaves the list.
 
-From then on, the authority refuses every certificate from the stolen CA, and every gateway and worker needs a new token. A gateway or a worker that still runs trusts the stolen CA until its own certificate has expired. That's one more reason for the upper limit on the lifetime.
+From then on, the authority refuses every certificate from the stolen CA, and every gateway and worker needs a new token. A gateway or a worker that still runs trusts the stolen CA until its own certificate has expired. With the default lifetime that is at most 24 hours, and never more than seven days.
 
 ### The signer
 
