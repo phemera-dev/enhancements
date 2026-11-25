@@ -8,7 +8,7 @@ approvers:
   - "@tidegate-dev/maintainers"
 tracking-issue: null
 created: 2026-10-01
-last-updated: 2026-10-22
+last-updated: 2026-11-25
 replaces: []
 superseded-by: []
 ---
@@ -19,7 +19,8 @@ superseded-by: []
 
 Tidegate is a cloud native privileged access management (PAM) system. It grants just-in-time (JIT), just-enough (JEA) access to infrastructure assets such as servers, databases, remote desktops, and Kubernetes clusters. Users hold no standing credentials. Access is requested, approved, limited in time and scope, injected into the session by Tidegate, and recorded.
 
-This TEP records the high-level architecture the maintainers agreed on. An authority backed by Postgres makes every access decision and is managed through a CLI and a web UI. A data plane carries the actual sessions. It has one HTTPS entry point, the web-gateway, plus optional protocol gateways that let native tools such as `ssh` or an RDP client connect without a Tidegate client. The gateways hand sessions to workers. A worker is either a proxy that reaches its targets directly or a broker that reaches them through an agent running near the target. Optionally, a network load balancer in front of the data plane routes each port to the matching gateway.
+This TEP records the high-level architecture the maintainers agreed on. An authority backed by Postgres makes every access decision and is managed through a CLI and a web UI via dedicated endpoints.
+A data plane carries the actual sessions. It has one web-gateway, plus optional protocol gateways that let native tools such as `ssh` or an RDP client connect without a Tidegate client. The gateways hand sessions to workers. A worker is either a proxy that reaches its targets directly or a broker that reaches them through an agent running near the target. Optionally, a network load balancer in front of the data plane routes each port to the matching gateway.
 
 The design follows [jumpgate](https://github.com/trevex/jumpgate), an earlier project by one of the maintainers, and extends it with protocol gateways for native clients. The ssh-gateway takes its model from [Warpgate](https://github.com/warp-tech/warpgate), an open source SSH and HTTP bastion that accepts unmodified SSH clients. External secret stores such as OpenBao and external audit log sinks are planned and shape the design, but their details are left to future TEPs.
 
@@ -66,15 +67,19 @@ These principles guide the component design. Component TEPs that depart from one
 flowchart TB
     subgraph clients["Clients"]
         cli["Tidegate CLI"]
-        browser["Browser · web UI"]
+        browser["Web Browser"]
         native["Native clients<br>ssh · RDP client · psql"]
         kubectl["kubectl"]
     end
 
     subgraph au["Authority"]
-        api["Authority API + UI"]
+        engine["Engine"]
         db[("Postgres")]
-        api --- db
+        ui["Web UI"]
+        api["Authority API"]
+        engine --- db
+        api --> engine
+        ui --> api
     end
 
     nlb["Network load balancer<br>:443 · :22 · :3389 · …"]
@@ -98,7 +103,7 @@ flowchart TB
     end
 
     cli -->|"manage · request access · mint session"| api
-    browser -->|"manage · request access · mint session"| api
+    browser -->|"manage · request access · mint session"| ui
     cli -->|"session traffic"| nlb
     browser -->|"session traffic"| nlb
     native --> nlb
@@ -110,7 +115,7 @@ flowchart TB
     web --> broker
     sshgw --> proxy
     rdpgw --> proxy
-    dp <-->|"watch session · record · check"| au
+    dp <-->|"watch session · record · check"| api
     proxy -->|"inject credential · proxy"| hosts
     agent -.->|"dials out"| broker
     agent -->|"impersonate"| kube
@@ -120,16 +125,15 @@ flowchart TB
 
 The authority decides every access question in Tidegate. It owns identities, the asset catalog, roles and policies, access requests and approvals, time-limited grants, stored secrets and certificate authorities, the audit log, and the registry of live workers and sessions. It keeps all of this state in Postgres, so authority replicas are stateless and scale horizontally against one database.
 
-The authority exposes two interfaces:
+The authority is composed of the following core components:
 
-- A user-facing API and the web UI, reached by the CLI and the browser on their own endpoint. Users manage assets and policies, request and approve access, and mint session admission tokens here.
-- An internal API on the mesh for gateways and workers. They use it to register, look up routing information, prepare sessions, obtain target credentials, and report session events.
+- **Authority API**: Exposes at least two endpoints
+  - A **external API** reached by the web ui and CLI on their own endpoint. Users manage assets and policies, request and approve access, and mint session admission tokens here.
+  - An **internal API** on the mesh for gateways and workers. They use it to register, look up routing information, prepare sessions, obtain target credentials, and report session events. Internal API may be segmented further by functional scope and security requirements.
+- **Authorization Engine**: Serves as the central Policy Decision Point (PDP) to evaluate access requests and determine granular permissions.
+- **Postgress**: It is the authority's only source of truth. Operators run it with the guarantees a security system's database needs: replication, backups, and point-in-time recovery. No other component connects to it.
 
-#### Postgres
-
-Postgres is the authority's only source of truth. Operators run it with the guarantees a security system's database needs: replication, backups, and point-in-time recovery. No other component connects to it.
-
-#### CLI and web UI
+### Tidegate CLI and web UI
 
 The CLI and the web UI are the two management clients. Both cover the same access loop: find an asset, request access, approve requests, and start a session. The CLI also starts sessions for protocols that need a local helper, such as a kubeconfig credential plugin for `kubectl`. The web UI starts browser-based sessions, such as an in-browser terminal or remote desktop.
 
@@ -150,9 +154,9 @@ The load balancer passes TCP through unchanged, so TLS and protocol handshakes t
 
 Gateways are the only data plane components exposed to users. They admit sessions and route them to a worker. They hold no credentials to targets and keep no authorization state beyond the session they are carrying.
 
-The web-gateway carries all HTTPS-based session traffic. It accepts tunneled sessions from the CLI, WebSocket sessions from the browser, and Kubernetes API requests from `kubectl`. Each request carries a short-lived admission token minted by the authority. The web-gateway verifies the token, selects a worker that serves the session's protocol, and relays bytes between the client and the worker. It does not terminate the target protocol, so adding a protocol that can be tunneled over HTTPS needs a new worker but no web-gateway change.
+The **web-gateway** carries all HTTPS-based session traffic. It accepts tunneled sessions from the CLI, WebSocket sessions from the browser, and Kubernetes API requests from `kubectl`. Each request carries a short-lived admission token minted by the authority. The web-gateway verifies the token, selects a worker that serves the session's protocol, and relays bytes between the client and the worker. It does not terminate the target protocol, so adding a protocol that can be tunneled over HTTPS needs a new worker but no web-gateway change.
 
-Protocol gateways accept native clients on the protocol's own port. A native client cannot present a Tidegate admission token, so a protocol gateway speaks enough of its protocol to authenticate the user and find out which asset and login the user wants. It then asks the authority to admit the session and hands it to a worker as the web-gateway would. The ssh-gateway, pg-gateway and rdp-gateway are the first expected protocol gateways. Others are added when a protocol has enough users of native tooling to justify one.
+**Protocol gateways** accept native clients on the protocol's own port. A native client cannot present a Tidegate admission token, so a protocol gateway speaks enough of its protocol to authenticate the user and find out which asset and login the user wants. It then asks the authority to admit the session and hands it to a worker as the web-gateway would. The ssh-gateway, pg-gateway and rdp-gateway are the first expected protocol gateways. Others are added when a protocol has enough users of native tooling to justify one.
 
 #### Workers
 
@@ -160,8 +164,8 @@ Workers carry sessions to targets. Every worker registers with the authority ove
 
 Tidegate has two kinds of worker:
 
-- A proxy connects to its targets directly over the network. It suits targets the data plane can reach, such as SSH servers, Windows hosts over RDP, and databases. Targets need no software installed.
-- A broker never connects to targets itself. An agent installed next to the target dials out to the broker and keeps a tunnel open, and the broker sends sessions down that tunnel. This suits targets that accept no inbound connections from the data plane or have restricted authentication options, such as Kubernetes clusters in public clouds. The Kubernetes agent forwards requests to its cluster's API server and impersonates the Tidegate user, so the cluster's own RBAC decides what the user can do.
+- A **proxy** connects to its targets directly over the network. It suits targets the data plane can reach, such as SSH servers, Windows hosts over RDP, and databases. Targets need no software installed.
+- A **broker** never connects to targets itself. An agent installed next to the target dials out to the broker and keeps a tunnel open, and the broker sends sessions down that tunnel. This suits targets that accept no inbound connections from the data plane or have restricted authentication options, such as Kubernetes clusters in public clouds. The Kubernetes agent forwards requests to its cluster's API server and impersonates the Tidegate user, so the cluster's own RBAC decides what the user can do.
 
 Each worker serves one protocol. That keeps protocol handling, credential injection, and recording for one protocol in one place, and lets a protocol be added without touching other workers.
 
@@ -274,6 +278,8 @@ The authority keeps a ledger of live sessions and the grant or binding each one 
 
 ### Trust zones
 
+To adhere to the Principle of Least Privilege, Tidegate is designed modular, requiring its individual modules to reside in distinct trust zones.
+
 ```mermaid
 flowchart LR
     subgraph user["User networks · untrusted"]
@@ -282,10 +288,12 @@ flowchart LR
     subgraph edge["Edge · exposed"]
         lb["Network LB"]
         gws["Gateways"]
-        auapi["Authority endpoint"]
+        ex-api["External API"]
+        web-ui["Web UI"]
     end
     subgraph core["Core · internal only"]
-        au["Authority"]
+        in-api["Internal API"]
+        au["Engine"]
         db[("Postgres")]
         wk["Workers"]
     end
@@ -293,17 +301,28 @@ flowchart LR
         t["Targets · agents"]
     end
     c --> lb --> gws
-    c --> auapi
+    c --> ex-api
+    c --> web-ui
+    web-ui --> ex-api
     gws --> wk
-    gws --> au
-    auapi --- au
+    gws --> in-api
+    ex-api --- au
+    in-api --> au
     au --- db
-    wk --> au
+    wk --> in-api
     wk --> t
     t -.->|"agents dial out"| wk
 ```
 
-Only the edge zone accepts connections from user networks. Workers, the database, and the recording store accept connections only from inside the core zone. Targets reached through agents accept no inbound connections from Tidegate at all.
+Clients reside in **untrusted zones**. Every request originating from an untrusted zone is treated as a potential attack.
+
+The **edge zone** accepts inbound connections from untrusted networks. Load balancer, web ui and gateways MUST be located in this zone.
+
+The authority offers an external and one or more internal APIs. The internal APIs MUST be isolated in **core zone** , including the authority engine and the database. The external authority API CAN be isolated in **core zone** by an operator behind a load balancer or a firewall or a similar component. Core zone MUST not be connected to untrusted zones, but MUST accept inbound connections exclusively from inside the **edge zone**. The exception to this is the external authority API if configured to be in the **edge zone**.
+
+Targets reached through agents MUST accept no inbound connections from Tidegate at all. Agents reside in **target network** and initiate outbound connections to the PAM on its own.
+
+Its up to Tidegate's operator to set trust zones accordingly.
 
 ### Future extensions
 
@@ -379,3 +398,6 @@ Supporting only the Tidegate CLI and browser, as jumpgate did, would avoid proto
 
 - 2026-10-01: First draft, based on the architecture agreed in a maintainers' meeting.
 - 2026-10-22: Renamed the control plane to the authority.
+- 2026-11-24:
+  - Made trust zone more explicitly
+  - split authority into external and internal API as well as authority engine.
