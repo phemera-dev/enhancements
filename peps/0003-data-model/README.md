@@ -1,5 +1,5 @@
 ---
-tep: 0003
+pep: 0003
 title: Data and authorization model
 status: draft
 authors:
@@ -13,11 +13,11 @@ replaces: []
 superseded-by: []
 ---
 
-# TEP-0003: Data and authorization model
+# PEP-0003: Data and authorization model
 
 ## Summary
 
-This TEP defines the resources the Phemera authority stores and the rules it uses to decide who may do what. It is a starting model agreed over several maintainer meetings, and later TEPs are expected to refine it.
+This PEP defines the resources the Phemera authority stores and the rules it uses to decide who may do what. It is a starting model agreed over several maintainer meetings, and later PEPs are expected to refine it.
 
 The organization is the top level of the model. For now a Phemera instance serves exactly one organization, which stays implicit: it is not stored and does not appear in the API. The organization holds users, identity providers, and organization roles that govern administration, such as who manages users or creates and recovers projects. All access to infrastructure lives in projects. A project holds assets, groups, roles, bindings, and access policies. An asset is one project's access definition for a target. Assets carry labels, and a project role uses label selectors and typed, protocol-specific permissions to describe access, such as logging in over SSH as `root`. A binding gives a role to a user or group, either as standing access or for a limited time after an approved access request.
 
@@ -25,7 +25,7 @@ The model borrows its shape from Kubernetes RBAC. An organization role works lik
 
 ## Motivation
 
-Every component described in [TEP-0002](../0002-architecture/README.md) depends on the authority's data model. The API, the CLI, the web UI, the access request flow, and the authorization checks made on behalf of gateways and workers all need the same vocabulary. Agreeing on it before the API TEPs start keeps those TEPs from inventing incompatible versions of the same concepts.
+Every component described in [PEP-0002](../0002-architecture/README.md) depends on the authority's data model. The API, the CLI, the web UI, the access request flow, and the authorization checks made on behalf of gateways and workers all need the same vocabulary. Agreeing on it before the API PEPs start keeps those PEPs from inventing incompatible versions of the same concepts.
 
 Jumpgate, Phemera's predecessor, organized assets in a folder tree and let roles cascade down folders through rewrite rules. That model is expressive, but access depends on where an asset sits in the tree and on which rules a role carries, which makes it hard to see why someone has access. The maintainers want a flatter model in which access follows from a short chain of explicit records: a binding, a role, a matching asset rule, and the typed permission that allowed the operation. Labels also suit assets that are discovered or managed by automation, because tooling can set labels without placing assets in a hierarchy.
 
@@ -43,10 +43,10 @@ The model also has to separate administration of Phemera from access through Phe
 
 ### Non-goals
 
-- Database schemas, API definitions, wire formats, and a final declarative configuration schema. A future TEP defines exact field names and casing, resource versioning and metadata, serialization-specific defaulting and validation, and create, update, and apply semantics.
-- The complete schema of protocol-specific asset permissions. Each worker TEP defines the typed fields and matching behavior for its protocol.
-- Asset connection details, credential configuration, and target identity pinning. These belong to the asset catalog and worker TEPs.
-- Identity provider protocols. This TEP assumes OIDC for examples but does not choose the supported set.
+- Database schemas, API definitions, wire formats, and a final declarative configuration schema. A future PEP defines exact field names and casing, resource versioning and metadata, serialization-specific defaulting and validation, and create, update, and apply semantics.
+- The complete schema of protocol-specific asset permissions. Each worker PEP defines the typed fields and matching behavior for its protocol.
+- Asset connection details, credential configuration, and target identity pinning. These belong to the asset catalog and worker PEPs.
+- Identity provider protocols. This PEP assumes OIDC for examples but does not choose the supported set.
 - Implementing the organization as a resource, and multi-organization support. The organization is described so the model has room for it, but the first implementation stores no organization record or organization identifier, and the API does not expose one.
 - Requesting organization governance through AccessPolicy or creating OrgBindings from access requests. This can be added as a future feature but is not part of the MVP.
 - Requesting or granting a narrowed subset of a Role, and protocol-specific exclusions within an asset permission. The model leaves room for both, but their schemas and evaluation rules are future work.
@@ -106,7 +106,7 @@ An organization is the tenant boundary. Users, identity providers, organization 
 
 The organization is part of the model but will not be implemented for now. A Phemera instance serves exactly one organization, and that organization is the instance itself. The authority stores no organization record and no organization identifier on other records, and no interface or bootstrap document needs to name an organization. Organization-level resources are therefore unique across the instance.
 
-Hosting several organizations in one instance is a possible future feature. It would make the organization an explicit resource and require a migration that assigns existing records to a default organization and scopes names and queries by it. This TEP avoids choices that would make that harder: no reference relies on there being only one organization in a way that a default organization could not satisfy.
+Hosting several organizations in one instance is a possible future feature. It would make the organization an explicit resource and require a migration that assigns existing records to a default organization and scopes names and queries by it. This PEP avoids choices that would make that harder: no reference relies on there being only one organization in a way that a default organization could not satisfy.
 
 ### Identity providers and users
 
@@ -116,7 +116,7 @@ A User is an organization-level identity. Users are referenced by name across al
 
 Some users also need local login. When the IdP is down or misconfigured, administrators must still be able to sign in and repair the instance. Local login is opt-in per user and intended for a small number of break-glass accounts. It requires both a password and an enrolled second factor, such as TOTP or a passkey, and every local login is recorded as a distinct audit event so it can trigger alerts.
 
-The authority stores local passwords only as self-describing password-hash strings. The initial implementation accepts [Argon2id](https://www.rfc-editor.org/rfc/rfc9106.html) in [PHC string format](https://c2sp.org/phc-strings), which identifies the algorithm, version and cost parameters alongside the salt and hash. This makes the method explicit and lets the authority reject unsupported algorithms or parameters below its security policy. The exact second-factor enrollment, storage, and recovery fields are defined by the authentication and API TEPs; local login cannot succeed until an accepted factor is enrolled.
+The authority stores local passwords only as self-describing password-hash strings. The initial implementation accepts [Argon2id](https://www.rfc-editor.org/rfc/rfc9106.html) in [PHC string format](https://c2sp.org/phc-strings), which identifies the algorithm, version and cost parameters alongside the salt and hash. This makes the method explicit and lets the authority reject unsupported algorithms or parameters below its security policy. The exact second-factor enrollment, storage, and recovery fields are defined by the authentication and API PEPs; local login cannot succeed until an accepted factor is enrolled.
 
 ### Organization roles and bindings
 
@@ -155,7 +155,7 @@ By default a group is visible only within its project. A group marked as shared 
 
 Sharing lets an organization define a group such as `security-team` once, in a project that owns it, and reuse it everywhere. Only the owning project can change a shared group's membership, so other projects reference it but cannot alter it.
 
-This TEP uses `shared` as the model term. The future API TEP may choose a different field name when it defines the concrete Group schema.
+This PEP uses `shared` as the model term. The future API PEP may choose a different field name when it defines the concrete Group schema.
 
 Every cross-project group reference names both the owning project and the group. A bare group name is resolved only within the current project, so shared groups with the same name in different projects remain unambiguous.
 
@@ -167,11 +167,11 @@ A group can combine an external reference with explicitly listed members. Member
 
 ### Assets and labels
 
-An Asset is a project-scoped access definition for a target that Phemera brokers access to, such as an SSH host, a Windows host, a database, a Kubernetes cluster, or another kind supported by a worker. It describes how Phemera identifies and connects to that target; it is not a globally unique record of the underlying machine, database, or cluster. Every asset belongs to exactly one project and has a kind, a name unique within its project, and kind-specific configuration defined by the asset catalog and worker TEPs.
+An Asset is a project-scoped access definition for a target that Phemera brokers access to, such as an SSH host, a Windows host, a database, a Kubernetes cluster, or another kind supported by a worker. It describes how Phemera identifies and connects to that target; it is not a globally unique record of the underlying machine, database, or cluster. Every asset belongs to exactly one project and has a kind, a name unique within its project, and kind-specific configuration defined by the asset catalog and worker PEPs.
 
 Different projects can define separate assets for the same underlying system or endpoint. Each definition is administered independently and can use different credentials or credential references, protocol settings, labels, roles, and access policies. Phemera does not link those definitions or treat changes to one as changes to the others. This lets each project own its access path without depending on an organization administrator or another project.
 
-Assets carry labels: key-value pairs in the style of Kubernetes object labels, such as `env: prod` or `team: payments`. Labels are the only way roles select assets. A project does not predeclare label keys or restrict assets to an allowed key set; assets may use any label accepted by the concrete label syntax chosen by the future API TEP. Changing an asset's labels can therefore change who has access to it, so updating labels requires its own project-wide permission, described under [Project-wide permissions](#project-wide-permissions).
+Assets carry labels: key-value pairs in the style of Kubernetes object labels, such as `env: prod` or `team: payments`. Labels are the only way roles select assets. A project does not predeclare label keys or restrict assets to an allowed key set; assets may use any label accepted by the concrete label syntax chosen by the future API PEP. Changing an asset's labels can therefore change who has access to it, so updating labels requires its own project-wide permission, described under [Project-wide permissions](#project-wide-permissions).
 
 ### Role specifications and permissions
 
@@ -180,7 +180,7 @@ A Role has a well-defined spec with two independent concerns:
 - Asset access rules associate a required label selector with typed, protocol-specific permissions. A matching rule applies only to assets in the role's project. An explicitly empty selector matches every asset in that project, including assets added later; omitting the selector is invalid.
 - Project-wide permissions govern project resources such as groups, roles, bindings, access policies, assets, and asset labels. Asset selectors do not narrow these permissions.
 
-Role and OrgRole specs do not contain generic strings such as `project:role:edit` or `{scope, action, qualifier}` triples. Their allowed fields, values, and authorization behavior are well-defined. Each worker TEP defines the typed asset permissions for its protocol, such as the SSH accounts or Kubernetes groups a matching rule permits. A future API TEP turns this conceptual structure into versioned schemas and defines how unknown fields and invalid combinations are rejected.
+Role and OrgRole specs do not contain generic strings such as `project:role:edit` or `{scope, action, qualifier}` triples. Their allowed fields, values, and authorization behavior are well-defined. Each worker PEP defines the typed asset permissions for its protocol, such as the SSH accounts or Kubernetes groups a matching rule permits. A future API PEP turns this conceptual structure into versioned schemas and defines how unknown fields and invalid combinations are rejected.
 
 The conceptual Role shape has an unordered, additive list of asset rules and a separate project-governance subtree. The following YAML illustrates that shape; it does not settle final field names:
 
@@ -273,7 +273,7 @@ A Binding gives a Role to a subject within a project. The subject is a user, a g
 
 A binding without an expiry time is standing access. It lasts until someone deletes it. A binding with an expiry time is temporary access, and the authority removes it when it expires. Temporary bindings are usually created by an approved access request, described below, and record the request that created them. An administrator with the required project-wide permission can also create a temporary binding directly, for example to grant access during a planned maintenance window.
 
-When a binding expires or is deleted, live sessions that depend on it end, as described under continuous revocation in [TEP-0002](../0002-architecture/README.md#continuous-revocation).
+When a binding expires or is deleted, live sessions that depend on it end, as described under continuous revocation in [PEP-0002](../0002-architecture/README.md#continuous-revocation).
 
 ### Just-in-time access
 
@@ -283,7 +283,7 @@ Just-in-time access is a temporary binding created through an approved request. 
 - An AccessRequest records one user's request for a role under a policy, with the requested duration and a justification.
 - A Binding with an expiry time is the result of an approved request.
 
-The MVP requests and grants the complete Role named by the AccessPolicy. This does not prevent a future extension that lets a request ask for a narrower grant. Such an extension can record additional constraints on the AccessRequest and resulting Binding, with effective access defined as the intersection of the referenced Role and the approved constraints. Constraints can remove access from the Role but can never add to it. A future TEP will define their representation and whether they capture a snapshot or are evaluated dynamically; no constraint fields are part of the MVP.
+The MVP requests and grants the complete Role named by the AccessPolicy. This does not prevent a future extension that lets a request ask for a narrower grant. Such an extension can record additional constraints on the AccessRequest and resulting Binding, with effective access defined as the intersection of the referenced Role and the approved constraints. Constraints can remove access from the Role but can never add to it. A future PEP will define their representation and whether they capture a snapshot or are evaluated dynamically; no constraint fields are part of the MVP.
 
 AccessPolicy does not apply to OrgRole in the MVP. An approved request always creates a project Binding, never an OrgBinding.
 
@@ -316,17 +316,17 @@ The authority enforces these rules:
 
 Creating a binding or an access policy hands out the permissions of a role, so the authority checks two things. The creator must hold the project-wide permission to create bindings or policies. The creator must also be entitled to everything the role grants: either they hold every effective permission represented by the role's typed spec, on every asset its rules currently select, or their project permissions explicitly allow binding roles. This mirrors the escalation check in Kubernetes RBAC, where binding a role requires holding its permissions or explicit [`bind` permission](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#restrictions-on-role-binding-creation-or-update).
 
-The same rule applies to roles. Creating or changing a role requires the corresponding project-wide permission, and the new or changed role cannot grant asset or governance permissions the author is not entitled to delegate unless their project permissions explicitly allow escalation. Without this rule, a user allowed to edit roles could widen a role they are already bound to. The conceptual `bind` and `escalate` fields mirror Kubernetes' separate privilege-escalation controls; the future API TEP defines their final representation.
+The same rule applies to roles. Creating or changing a role requires the corresponding project-wide permission, and the new or changed role cannot grant asset or governance permissions the author is not entitled to delegate unless their project permissions explicitly allow escalation. Without this rule, a user allowed to edit roles could widen a role they are already bound to. The conceptual `bind` and `escalate` fields mirror Kubernetes' separate privilege-escalation controls; the future API PEP defines their final representation.
 
 ### Illustrative declarative configuration
 
-The examples in this TEP use a common document shape with `kind`, `name`, an optional `project`, and `spec` because it makes resource relationships and bootstrap behavior concrete. This shape is illustrative, not an API or configuration specification. A later TEP decides whether the real format uses these fields or Kubernetes-style `apiVersion`, `kind`, and `metadata`; it also defines casing, versioning, serialization-specific defaulting and validation, and authenticated create, update, and apply behavior.
+The examples in this PEP use a common document shape with `kind`, `name`, an optional `project`, and `spec` because it makes resource relationships and bootstrap behavior concrete. This shape is illustrative, not an API or configuration specification. A later PEP decides whether the real format uses these fields or Kubernetes-style `apiVersion`, `kind`, and `metadata`; it also defines casing, versioning, serialization-specific defaulting and validation, and authenticated create, update, and apply behavior.
 
-The bootstrap lifecycle is a decision of this TEP even though its serialization is not. A new instance can accept one set of declarative bootstrap documents exactly once. The authority validates and applies the complete set in one transaction and records successful initialization in that transaction. If validation or application fails, the transaction is rolled back, the instance remains uninitialized, and the operator can retry. After either bootstrap or interactive initial-administrator creation succeeds, the authority rejects all later bootstrap input; later configuration changes use the authenticated API or CLI behavior defined by the future API TEP.
+The bootstrap lifecycle is a decision of this PEP even though its serialization is not. A new instance can accept one set of declarative bootstrap documents exactly once. The authority validates and applies the complete set in one transaction and records successful initialization in that transaction. If validation or application fails, the transaction is rolled back, the instance remains uninitialized, and the operator can retry. After either bootstrap or interactive initial-administrator creation succeeds, the authority rejects all later bootstrap input; later configuration changes use the authenticated API or CLI behavior defined by the future API PEP.
 
 As an alternative to a bootstrap file, an operator can run `authority create-initial-admin` against an uninitialized instance with no User records. The command interactively creates the initial User, enrolls a password and second factor, creates the superadmin OrgRole if needed, creates its OrgBinding, and marks the instance initialized in one transaction. It reads the password interactively, hashes it inside the authority, and never accepts it in a command-line argument or writes it to logs.
 
-Declarative local-login credentials contain a precomputed, self-describing hash in a field such as `passwordHash`; plaintext passwords are rejected. A schematic Argon2id value has the form `$argon2id$v=19$m=<memory>,t=<iterations>,p=<parallelism>$<salt>$<hash>`. An acceptable enrolled second factor must also be present before the account can be used. The field names for that factor are left to the authentication and API TEPs.
+Declarative local-login credentials contain a precomputed, self-describing hash in a field such as `passwordHash`; plaintext passwords are rejected. A schematic Argon2id value has the form `$argon2id$v=19$m=<memory>,t=<iterations>,p=<parallelism>$<salt>$<hash>`. An acceptable enrolled second factor must also be present before the account can be used. The field names for that factor are left to the authentication and API PEPs.
 
 ```yaml
 kind: IdentityProvider
@@ -340,7 +340,7 @@ name: breakglass
 spec:
   localLogin:
     passwordHash: "$argon2id$v=19$m=<memory>,t=<iterations>,p=<parallelism>$<salt>$<hash>"
-    secondFactor: ... # Illustrative; the authentication TEP defines this field.
+    secondFactor: ... # Illustrative; the authentication PEP defines this field.
 ---
 kind: OrgRole
 name: superadmin
@@ -376,7 +376,7 @@ spec:
     name: breakglass
 ```
 
-In this example, members of the IdP group `admin` at the `github` provider become members of the shared `system/admins` group when they sign in, and through the OrgBinding they hold the `superadmin` organization role. Once provisioned with the concrete second-factor fields defined by the authentication TEP, the `breakglass` user can sign in with its local password and second factor when the IdP is unavailable. Neither has access to any asset until a project binding grants it.
+In this example, members of the IdP group `admin` at the `github` provider become members of the shared `system/admins` group when they sign in, and through the OrgBinding they hold the `superadmin` organization role. Once provisioned with the concrete second-factor fields defined by the authentication PEP, the `breakglass` user can sign in with its local password and second factor when the IdP is unavailable. Neither has access to any asset until a project binding grants it.
 
 ### User stories
 
@@ -428,11 +428,11 @@ Cross-project governance through an OrgRole follows the same rule but resolves O
 
 ### Permission matching and validation
 
-Whatever exact versioned schema the future API TEP chooses, the authority validates Role and OrgRole documents when they are written. Unknown permission fields, unknown protocol sections, invalid values, omitted asset selectors, and invalid field combinations are rejected rather than ignored.
+Whatever exact versioned schema the future API PEP chooses, the authority validates Role and OrgRole documents when they are written. Unknown permission fields, unknown protocol sections, invalid values, omitted asset selectors, and invalid field combinations are rejected rather than ignored.
 
-At evaluation time, the authority uses the behavior defined for the relevant typed field. For example, the SSH worker TEP defines how a role expresses permitted accounts, while the Kubernetes worker TEP defines how a role expresses groups or users to impersonate. There is no common wildcard or string-matching language across these schemas.
+At evaluation time, the authority uses the behavior defined for the relevant typed field. For example, the SSH worker PEP defines how a role expresses permitted accounts, while the Kubernetes worker PEP defines how a role expresses groups or users to impersonate. There is no common wildcard or string-matching language across these schemas.
 
-Protocol-specific exclusions are not part of the MVP. When added, they must be declared explicitly in the Role spec as part of the relevant typed protocol permission, following the role-local precedent of Teleport's [`allow` and `deny` conditions](https://goteleport.com/docs/reference/access-controls/roles/). An exclusion narrows that protocol permission; it is not a generic deny rule that overrides grants from other bindings. The worker TEP for the protocol and a future data-model update will define the concrete fields, enforcement point, and combination behavior.
+Protocol-specific exclusions are not part of the MVP. When added, they must be declared explicitly in the Role spec as part of the relevant typed protocol permission, following the role-local precedent of Teleport's [`allow` and `deny` conditions](https://goteleport.com/docs/reference/access-controls/roles/). An exclusion narrows that protocol permission; it is not a generic deny rule that overrides grants from other bindings. The worker PEP for the protocol and a future data-model update will define the concrete fields, enforcement point, and combination behavior.
 
 ### Group membership from identity providers
 
@@ -442,7 +442,7 @@ A user who signs in with a local password has no IdP claims, so they belong only
 
 ### Names and references
 
-Organization-level resources have names unique within the organization for their kind. Project-level resources have names unique within their project for their kind. A reference to a project-level resource from another project, such as a shared group, names both the project and the resource. The illustrative declarative documents resolve references by name; the implementation stores immutable identifiers so renaming a resource does not break references to it. The future API TEP defines the exact reference representation.
+Organization-level resources have names unique within the organization for their kind. Project-level resources have names unique within their project for their kind. A reference to a project-level resource from another project, such as a shared group, names both the project and the resource. The illustrative declarative documents resolve references by name; the implementation stores immutable identifiers so renaming a resource does not break references to it. The future API PEP defines the exact reference representation.
 
 ## Security considerations
 
@@ -451,15 +451,15 @@ Organization-level resources have names unique within the organization for their
 - Credentials and secrets. Local passwords are stored only as self-describing hashes, initially Argon2id PHC strings. IdP client secrets and secret material used by second factors are encrypted at rest; password hashes and secrets are never returned through the API. Bootstrap rejects plaintext passwords, unsupported hash algorithms, hashes below the configured security policy, and local-login users without an accepted second factor. Interactive initial-administrator creation reads the password without exposing it in process arguments or logs.
 - Audit. Every create, update, and delete of a resource in this model is audited, along with project recovery, access requests, approvals, denials, revocations, binding expiry, IdP-derived membership changes, and local logins. The audit record of an access decision names the binding, role, matching asset rule, and typed permission that allowed it.
 - Failure behavior. Unknown spec fields, unresolvable references, and roles that fail validation are rejected when they are written. At evaluation time, a binding whose role or subject cannot be resolved grants nothing. If the IdP is unavailable, IdP users cannot sign in, and break-glass accounts are the fallback.
-- Threat model. In scope are a malicious requester, a compromised approver, a malicious project administrator, and a compromised IdP account. Self-approval is impossible, temporary access cannot be used to approve other requests, a project administrator cannot grant permissions beyond those they may delegate or affect projects that do not reference their shared groups, and IdP claims only affect explicitly mapped groups. A compromised identity provider can assert any mapped group and is out of scope for mitigation in this model. Organizations that need protection against it can require approvals from users who sign in with a separate factor, which a later TEP can address.
+- Threat model. In scope are a malicious requester, a compromised approver, a malicious project administrator, and a compromised IdP account. Self-approval is impossible, temporary access cannot be used to approve other requests, a project administrator cannot grant permissions beyond those they may delegate or affect projects that do not reference their shared groups, and IdP claims only affect explicitly mapped groups. A compromised identity provider can assert any mapped group and is out of scope for mitigation in this model. Organizations that need protection against it can require approvals from users who sign in with a separate factor, which a later PEP can address.
 
 ## Compatibility and upgrade
 
-Phemera has no released version, so this TEP has no compatibility impact. The authority API TEP defines how resource versions evolve.
+Phemera has no released version, so this PEP has no compatibility impact. The authority API PEP defines how resource versions evolve.
 
 ## Test plan
 
-This TEP defines no code. The authority implementation is expected to include table-driven tests for access evaluation, additive and order-independent asset rules, required selectors and explicit empty selectors, negative authorization tests for every escalation rule in this TEP, tests that project creation atomically establishes its initial administrator, tests that project recovery can bind only the standard administrator role, and tests that self-approval and approval through temporary bindings are rejected. Initialization tests cover transactional bootstrap, retry after rollback, rejection after successful initialization, the initial-administrator command's guards, PHC string validation and minimum parameters, rejection of plaintext passwords, and mandatory second-factor enrollment for local login.
+This PEP defines no code. The authority implementation is expected to include table-driven tests for access evaluation, additive and order-independent asset rules, required selectors and explicit empty selectors, negative authorization tests for every escalation rule in this PEP, tests that project creation atomically establishes its initial administrator, tests that project recovery can bind only the standard administrator role, and tests that self-approval and approval through temporary bindings are rejected. Initialization tests cover transactional bootstrap, retry after rollback, rejection after successful initialization, the initial-administrator command's guards, PHC string validation and minimum parameters, rejection of plaintext passwords, and mandatory second-factor enrollment for local login.
 
 ## Rollout
 
@@ -489,7 +489,7 @@ Storing an organization identifier on every record now, with a single organizati
 
 Making an asset an organization-level resource that can belong to several projects would avoid duplicate endpoint configuration. It would also require organization-wide ownership or a separate sharing and binding model, make project administrators depend on another owner for asset changes, and complicate projects that need different credentials or levels of control over the same target. The initial model instead keeps each Asset in exactly one project. More advanced sharing can be added later if concrete use cases outweigh that administrative cost.
 
-Using Kubernetes `PolicyRule` objects directly, with generic resource and verb strings, would make governance permissions compact and easy to extend. It would also reintroduce the stringly capability model this TEP rejects and would not naturally express protocol-specific asset access such as SSH accounts or Kubernetes impersonation groups. Phemera instead borrows Kubernetes' additive rule lists, label selectors, and explicit `bind` and `escalate` controls while keeping permission fields typed.
+Using Kubernetes `PolicyRule` objects directly, with generic resource and verb strings, would make governance permissions compact and easy to extend. It would also reintroduce the stringly capability model this PEP rejects and would not naturally express protocol-specific asset access such as SSH accounts or Kubernetes impersonation groups. Phemera instead borrows Kubernetes' additive rule lists, label selectors, and explicit `bind` and `escalate` controls while keeping permission fields typed.
 
 A single level of roles, where organization administration is expressed as fields in the Role spec of some special project, would remove the OrgRole and OrgBinding kinds. It would also let a project administrator of that special project gain organization rights, and it would mix governance and access in one evaluation path.
 

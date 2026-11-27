@@ -1,5 +1,5 @@
 ---
-tep: 0006
+pep: 0006
 title: How the authority stores and changes data
 status: draft
 authors:
@@ -13,17 +13,17 @@ replaces: []
 superseded-by: []
 ---
 
-# TEP-0006: How the authority stores and changes data
+# PEP-0006: How the authority stores and changes data
 
 ## Summary
 
-The authority stores its data in Postgres. This TEP defines how the authority's logic, the code that decides who gets access, reads and writes that data: how it reads rows, changes them and writes them back, and what happens when two changes to the same row collide.
+The authority stores its data in Postgres. This PEP defines how the authority's logic, the code that decides who gets access, reads and writes that data: how it reads rows, changes them and writes them back, and what happens when two changes to the same row collide.
 
-For each table there are two Go structs. One is generated from the table by a tool and uses the database driver's types, and this TEP calls it the database model. The other uses plain Go types, and this TEP calls it the code model. The logic only ever sees the code model.
+For each table there are two Go structs. One is generated from the table by a tool and uses the database driver's types, and this PEP calls it the database model. The other uses plain Go types, and this PEP calls it the code model. The logic only ever sees the code model.
 
-A method that changes data doesn't run its own SQL. It puts each write on a list, which this TEP calls a unit of work (uow), and then calls `Commit`, which opens a transaction, runs the SQL for every write on the list and commits. Every `UPDATE` and `DELETE` in that transaction checks that the row is still at the version the method read. If it isn't, `Commit` returns an error, the API answers with the status code `aborted`, and the client reads the data again before it sends the change again.
+A method that changes data doesn't run its own SQL. It puts each write on a list, which this PEP calls a unit of work (uow), and then calls `Commit`, which opens a transaction, runs the SQL for every write on the list and commits. Every `UPDATE` and `DELETE` in that transaction checks that the row is still at the version the method read. If it isn't, `Commit` returns an error, the API answers with the status code `aborted`, and the client reads the data again before it sends the change again.
 
-Queries that don't return one table's rows, like a list with a join, return a struct shaped like the query result, which this TEP calls a read model.
+Queries that don't return one table's rows, like a list with a join, return a struct shaped like the query result, which this PEP calls a read model.
 
 ## Motivation
 
@@ -43,9 +43,9 @@ The logic has to be easy to read and to test, and it must never lose a change. W
 
 ### Non-goals
 
-- How the audit log stores and protects its events. That's a TEP of its own, still to be written.
+- How the audit log stores and protects its events. That's a PEP of its own, still to be written.
 - Event sourcing, a second database for reads, and caching.
-- Which tables exist and what they hold. That's TEP-0003, the data model.
+- Which tables exist and what they hold. That's PEP-0003, the data model.
 
 ## Proposal
 
@@ -169,7 +169,7 @@ When the `UPDATE` or the `DELETE` matches no row, `store` runs a `SELECT` for th
 
 A unique constraint that refuses an `INSERT` or `UPDATE` is a conflict too, because it means another transaction used the value after the method checked that it was free, and `Commit` returns `model.ErrConflict` for it.
 
-Once the audit log TEP says what an event holds, `Commit` writes the audit events for the list in the same transaction before it commits. Until then it only commits. Postgres aborts the whole transaction on the first error, so when one write fails, none of the writes is kept, and a unit can't be used again after `Commit`, whether it succeeded or not.
+Once the audit log PEP says what an event holds, `Commit` writes the audit events for the list in the same transaction before it commits. Until then it only commits. Postgres aborts the whole transaction on the first error, so when one write fails, none of the writes is kept, and a unit can't be used again after `Commit`, whether it succeeded or not.
 
 A method must not read a row it has a pending write for, because the read would return the old data. A method that has to read after writing calls `Commit` first and then creates a new unit.
 
@@ -204,12 +204,12 @@ The tool that generates the database models also generates such a struct for eve
 
 ## Security considerations
 
-- Trust boundaries: none move. Only the authority connects to Postgres, as TEP-0002 says.
+- Trust boundaries: none move. Only the authority connects to Postgres, as PEP-0002 says.
 - Privilege: none granted. The version check prevents a lost update. Without it, two concurrent changes to a role or a binding could widen access without anyone deciding so.
 - Credentials and secrets: code models hold password and token hashes, never the plaintext. A code model with a secret field has no `String` method, so it can't be printed into a log by accident. The audit events hold the table, the ID and the kind of write, no column values.
-- Audit: `Commit` knows every write before it commits, which is what lets the audit log record every change in the same transaction. Whether an event can be skipped or forged is for the audit log TEP.
+- Audit: `Commit` knows every write before it commits, which is what lets the audit log record every change in the same transaction. Whether an event can be skipped or forged is for the audit log PEP.
 - Failure behavior: a conflict, a lost connection or a failed audit write rolls the transaction back. No partial change reaches the database. A failed change never grants anything.
-- Threat model: a client that sends the same change twice at once gets one success and one `aborted`. This design doesn't protect against a compromised authority replica, because the version check runs inside the replica. Postgres hardening is the operator's job, as TEP-0004 says.
+- Threat model: a client that sends the same change twice at once gets one success and one `aborted`. This design doesn't protect against a compromised authority replica, because the version check runs inside the replica. Postgres hardening is the operator's job, as PEP-0004 says.
 
 ## Compatibility and upgrade
 
@@ -245,7 +245,7 @@ A first change adds `model`, `store` and the unit of work for every table and mo
 
 ## Unresolved questions
 
-- How the list of pending writes becomes audit events, and whether a write like `RemoveExpired` produces one event or one per row. That's for the audit log TEP, but it has to be settled before the audit log is built.
+- How the list of pending writes becomes audit events, and whether a write like `RemoveExpired` produces one event or one per row. That's for the audit log PEP, but it has to be settled before the audit log is built.
 
 ## Implementation history
 

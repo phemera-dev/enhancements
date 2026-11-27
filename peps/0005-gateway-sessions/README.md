@@ -1,5 +1,5 @@
 ---
-tep: 0005
+pep: 0005
 title: Gateway routing and session lifecycle
 status: draft
 authors:
@@ -13,13 +13,13 @@ replaces: []
 superseded-by: []
 ---
 
-# TEP-0005: Gateway routing and session lifecycle
+# PEP-0005: Gateway routing and session lifecycle
 
 ## Summary
 
-This TEP defines how Phemera turns an authenticated client request into a proxied session. A client or ingress gateway presents authentication material to the authority and asks it to create a session for an exact asset, protocol, action, and qualifier such as an SSH login. The authority derives the user, checks current authorization, and returns a short-lived, single-use admission ticket. The session-gateway selects a compatible worker, and the worker redeems the ticket before it receives target details or a target credential.
+This PEP defines how Phemera turns an authenticated client request into a proxied session. A client or ingress gateway presents authentication material to the authority and asks it to create a session for an exact asset, protocol, action, and qualifier such as an SSH login. The authority derives the user, checks current authorization, and returns a short-lived, single-use admission ticket. The session-gateway selects a compatible worker, and the worker redeems the ticket before it receives target details or a target credential.
 
-TEP-0002 names the central decision-making component the `authority`; this TEP uses that name throughout. TEP-0002 calls the HTTPS entry point the `web-gateway`. This TEP proposes `session-gateway` because the component routes browser sessions, CLI tunnels, and tunnels opened by protocol gateways.
+PEP-0002 names the central decision-making component the `authority`; this PEP uses that name throughout. PEP-0002 calls the HTTPS entry point the `web-gateway`. This PEP proposes `session-gateway` because the component routes browser sessions, CLI tunnels, and tunnels opened by protocol gateways.
 
 All ingress paths use the same authority and worker lifecycle:
 
@@ -31,7 +31,7 @@ The ssh-gateway is trusted to report successful client authentication. The autho
 
 ## Motivation
 
-[TEP-0002](../0002-architecture/README.md) defines the authority, gateways, and workers at a high level. It leaves several session details open: how a gateway proves who it authenticated, what a session-creation request may contain, how replay is prevented, when a worker owns a session, and when a target credential may be released.
+[PEP-0002](../0002-architecture/README.md) defines the authority, gateways, and workers at a high level. It leaves several session details open: how a gateway proves who it authenticated, what a session-creation request may contain, how replay is prevented, when a worker owns a session, and when a target credential may be released.
 
 Native SSH also needs a clear trust decision. A nested SSH design can keep session contents and user authentication opaque to the ssh-gateway, but it requires two SSH handshakes, generated jump-host configuration, and an SSH server in the worker. This proposal trusts the ssh-gateway as the client-facing SSH endpoint. Users make one ordinary SSH connection, while the worker and authority retain control over authorization, target identity, credentials, recording, and revocation.
 
@@ -49,14 +49,14 @@ Native SSH also needs a clear trust decision. A nested SSH design can keep sessi
 
 ### Non-goals
 
-- Defining the role, binding, and access-request model. [TEP-0003](../0003-data-model/README.md) defines those resources.
-- Defining protobuf messages, package names, or the worker stream framing. A later API TEP specifies those wire formats.
+- Defining the role, binding, and access-request model. [PEP-0003](../0003-data-model/README.md) defines those resources.
+- Defining protobuf messages, package names, or the worker stream framing. A later API PEP specifies those wire formats.
 - Choosing an SSH library or recording container.
 - Defining the exact SSH username syntax used to name an asset and target login.
-- Designing protocol gateways other than SSH. They use the lifecycle in this TEP but need protocol-specific authentication and translation rules.
+- Designing protocol gateways other than SSH. They use the lifecycle in this PEP but need protocol-specific authentication and translation rules.
 - Allowing arbitrary TCP forwarding through Phemera. A worker connects only to the endpoint of the authorized asset.
 - Protecting session contents from a compromised public gateway for a transport that terminates there. Protocol gateways are trusted authenticators, while the session-gateway is a trusted ticket router and can see browser session traffic.
-- Defining the browser login-session credential. The authentication and API TEPs define its format and lifecycle. This TEP defines how the resulting admission ticket reaches the session-gateway without exposing that browser credential.
+- Defining the browser login-session credential. The authentication and API PEPs define its format and lifecycle. This PEP defines how the resulting admission ticket reaches the session-gateway without exposing that browser credential.
 - Defining high-availability or multi-region deployment topology.
 
 ## Proposal
@@ -161,7 +161,7 @@ The SSH worker owns the target side. It redeems the ticket, opens the recorder, 
 
 - A compromised ssh-gateway can request a session for any registered public key it knows. Public keys are not secrets, so requiring a key in the gRPC request limits the request to a real user and current authorization but does not prove that the user participated. Mutual TLS, method-level workload authorization, exact scope checks, rate limits, and audit reduce exposure. The future proof described below can require a fresh user signature.
 - A stolen CLI login token can be used against the authority's user API until it expires or is revoked. It never passes through the session-gateway. The default lifetime is bounded, the authority stores only a digest, logout revokes the login session, and every use is subject to current user state and authorization.
-- A stolen browser session credential can be used against the authority for as long as that credential remains valid. It never passes through the session-gateway. Its format, lifetime, and revocation behavior are defined by the authentication and API TEPs.
+- A stolen browser session credential can be used against the authority for as long as that credential remains valid. It never passes through the session-gateway. Its format, lifetime, and revocation behavior are defined by the authentication and API PEPs.
 - A stolen browser admission ticket can bootstrap its exact session before expiry. The ticket is short-lived and single-use, the gateway setup endpoint accepts it only from configured browser origins, and authoritative redemption still occurs once at the worker.
 - A stolen native admission ticket is usable only through the session-gateway endpoint, before expiry and redemption, from the gateway workload identity named by the ticket. The gateway-to-gateway `CONNECT` endpoint requires mutual TLS.
 - A compromised public gateway can read or alter sessions that terminate there. It still cannot obtain a target credential or choose a target address. The worker receives both from the authority and verifies target identity first.
@@ -218,11 +218,11 @@ The token is accepted only by the authority's user-facing API and is sent in pro
 
 ### Authority session APIs
 
-The CLI and browser call the authority's authenticated user-facing API. Gateways and workers call the internal authority API through gRPC over mutual TLS. A gateway's client certificate identifies its workload type and instance. Method-level authorization prevents one gateway type from using another gateway's session-creation operation and prevents any gateway from calling worker-only credential operations. A later API TEP defines the external and internal wire formats.
+The CLI and browser call the authority's authenticated user-facing API. Gateways and workers call the internal authority API through gRPC over mutual TLS. A gateway's client certificate identifies its workload type and instance. Method-level authorization prevents one gateway type from using another gateway's session-creation operation and prevents any gateway from calling worker-only credential operations. A later API PEP defines the external and internal wire formats.
 
 For CLI ingress, the user-facing session-creation operation receives the login token, exact asset, protocol, action, qualifier, stream kind, and optional client proof-of-possession key. The authority hashes the token, looks up an active and unexpired login-session record, checks that the user remains active, and derives the user from that record. It does not validate a signature on the opaque token and accepts no authoritative `subject` field. After checking the exact authorization, it creates the session and returns its admission ticket and session-gateway endpoint directly to the CLI.
 
-For browser ingress, the browser calls the user-facing session-creation operation with its browser session credential and the exact requested scope. The authority validates that credential, derives the user from it, checks authorization, and returns an admission ticket and session-gateway HTTPS setup endpoint directly to the browser. The request has no authoritative `subject` field. The browser credential's format and login lifecycle are outside this TEP.
+For browser ingress, the browser calls the user-facing session-creation operation with its browser session credential and the exact requested scope. The authority validates that credential, derives the user from it, checks authorization, and returns an admission ticket and session-gateway HTTPS setup endpoint directly to the browser. The request has no authoritative `subject` field. The browser credential's format and login lifecycle are outside this PEP.
 
 `CreateSSHSession` serves native SSH ingress. Its request contains:
 
@@ -432,7 +432,7 @@ The worker opens the required recording before requesting a target credential. T
 
 An SSH recording stores channel events with monotonic timestamps, direction, channel ID, event type, and payload. This supports terminal replay and preserves exec and file-transfer traffic without treating binary data as a terminal cast. Recording access is a separate audited capability because recordings can contain credentials typed into a shell and sensitive target data.
 
-The worker reports recording size, a cryptographic digest, status, and object identifier when the session ends. The authority appends that metadata to the session audit trail. The recording store uses retention controls or object immutability appropriate to the deployment, as described by [TEP-0004](../0004-scope-and-assumptions/README.md).
+The worker reports recording size, a cryptographic digest, status, and object identifier when the session ends. The authority appends that metadata to the session audit trail. The recording store uses retention controls or object immutability appropriate to the deployment, as described by [PEP-0004](../0004-scope-and-assumptions/README.md).
 
 The audit trail records at least:
 
@@ -480,7 +480,7 @@ Client errors remain generic where detail would reveal a user, key registration,
 
 ### Authority contracts
 
-The internal authority API uses gRPC over mutual TLS. The CLI and browser use the authenticated user-facing authority API. A later API TEP defines the external and internal protocols, packages, and messages; the operation names below are conceptual.
+The internal authority API uses gRPC over mutual TLS. The CLI and browser use the authenticated user-facing authority API. A later API PEP defines the external and internal protocols, packages, and messages; the operation names below are conceptual.
 
 | Operation | Caller | Result |
 |---|---|---|
@@ -503,11 +503,11 @@ The authority applies deadlines, request-size limits, idempotency, caller authen
 - Credentials and secrets. CLI login tokens are high-entropy opaque values stored only as digests by the authority, expire after a bounded lifetime, and can be revoked immediately. Browser login credentials also remain authority-only. Admission tickets are short-lived, single-use, and bound to the expected ingress where applicable. Browser cookies carry only admission tickets and are host-only, `Secure`, `HttpOnly`, path-scoped, and no longer-lived than the ticket. CLI tickets also use proof of possession. Target credentials go only to the owning worker after target verification.
 - Audit. State transitions and security decisions use the session ID. Ticket consumption and state transition share a transaction, so a crash cannot admit a session without a replay guard and audit record.
 - Failure behavior. New sessions fail closed when a required dependency is unavailable. Active sessions require renewable leases. Required recording failure ends the session. Termination messages are idempotent and backed by reconciliation.
-- Threat model. In scope are a malicious client, stolen user credential or ticket, compromised user key, network attacker, impostor target, compromised gateway, and compromised worker. A compromised authority, certificate authority, recording-store administrator, or worker host can defeat the controls it owns and remains an operator-level risk under TEP-0004.
+- Threat model. In scope are a malicious client, stolen user credential or ticket, compromised user key, network attacker, impostor target, compromised gateway, and compromised worker. A compromised authority, certificate authority, recording-store administrator, or worker host can defeat the controls it owns and remains an operator-level risk under PEP-0004.
 
 ## Compatibility and upgrade
 
-Phemera has no released session protocol, so this TEP has no user-facing compatibility requirement. Native SSH uses a single ordinary SSH connection and requires no `ProxyJump` configuration or second Phemera host identity.
+Phemera has no released session protocol, so this PEP has no user-facing compatibility requirement. Native SSH uses a single ordinary SSH connection and requires no `ProxyJump` configuration or second Phemera host identity.
 
 Admission tickets and session-stream preambles carry explicit versions. Gateways retain each verification key needed by an unexpired ticket. Workers advertise supported protocol, stream, and feature versions. A rolling upgrade keeps at least one mutually supported version between each connected component.
 

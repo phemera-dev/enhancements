@@ -1,22 +1,22 @@
 # Contributing to Phemera enhancements
 
-Thanks for your interest in contributing. This repository holds Phemera Enhancement Proposals (TEPs). This guide explains how to open a pull request here and what we look for in it.
+Thanks for your interest in contributing. This repository holds Phemera Enhancement Proposals (PEPs). This guide explains how to open a pull request here and what we look for in it.
 
 Please follow our [Code of Conduct](CODE_OF_CONDUCT.md) in all project spaces.
 
 ## Before you start
 
-To propose a new TEP, open an issue using the "TEP tracking issue" template first and describe the problem. The [README](README.md) summarizes when a TEP is needed and how to submit one, and [TEP-0001](teps/0001-tep-process/README.md) defines the full process. Typo fixes and other small corrections to existing TEPs can go straight to a pull request.
+To propose a new PEP, open an issue using the "PEP tracking issue" template first and describe the problem. The [README](README.md) summarizes when a PEP is needed and how to submit one, and [PEP-0001](peps/0001-pep-process/README.md) defines the full process. Typo fixes and other small corrections to existing PEPs can go straight to a pull request.
 
 ## Making a change
 
 1. Fork the repository and create a branch for your change.
 2. Make your change and sign off every commit (see [Developer Certificate of Origin](#developer-certificate-of-origin)).
-3. Run `scripts/validate-teps.py` locally, then open a pull request against `main`.
+3. Run `scripts/validate-peps.py` locally, then open a pull request against `main`.
 4. A maintainer reviews the pull request and may ask for changes.
 5. Once it is approved, a maintainer squash merges it.
 
-Every pull request needs one approval from a maintainer other than its author before it can be merged. If someone pushes to the pull request after the approval, it needs a new approval from someone other than that person. A TEP needs more approvals before its status changes, as [TEP-0001](teps/0001-tep-process/README.md#approval) explains.
+Every pull request needs one approval from a maintainer other than its author before it can be merged. If someone pushes to the pull request after the approval, it needs a new approval from someone other than that person. A PEP needs more approvals before its status changes, as [PEP-0001](peps/0001-pep-process/README.md#approval) explains.
 
 ## Pull request titles
 
@@ -28,11 +28,11 @@ Pull requests are squash merged, so the pull request title becomes the commit me
 
 For example:
 
-- `docs: add TEP-0004 for SSH session recording`
-- `docs(tep-0003): describe the role hierarchy`
-- `fix: correct the status check in validate-teps.py`
+- `docs: add PEP-0004 for SSH session recording`
+- `docs(pep-0003): describe the role hierarchy`
+- `fix: correct the status check in validate-peps.py`
 
-Allowed types are `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style` and `test`. For a breaking change, add `!` after the type or scope, for example `feat!: require a tracking issue for every TEP`.
+Allowed types are `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style` and `test`. For a breaking change, add `!` after the type or scope, for example `feat!: require a tracking issue for every PEP`.
 
 A check on every pull request validates the title. The commit messages inside your branch do not have to follow this format.
 
