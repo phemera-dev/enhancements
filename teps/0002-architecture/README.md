@@ -5,7 +5,7 @@ status: draft
 authors:
   - "@trevex"
 approvers:
-  - "@tidegate-dev/maintainers"
+  - "@phemera-dev/maintainers"
 tracking-issue: null
 created: 2026-10-01
 last-updated: 2026-11-25
@@ -17,22 +17,22 @@ superseded-by: []
 
 ## Summary
 
-Tidegate is a cloud native privileged access management (PAM) system. It grants just-in-time (JIT), just-enough (JEA) access to infrastructure assets such as servers, databases, remote desktops, and Kubernetes clusters. Users hold no standing credentials. Access is requested, approved, limited in time and scope, injected into the session by Tidegate, and recorded.
+Phemera is a cloud native privileged access management (PAM) system. It grants just-in-time (JIT), just-enough (JEA) access to infrastructure assets such as servers, databases, remote desktops, and Kubernetes clusters. Users hold no standing credentials. Access is requested, approved, limited in time and scope, injected into the session by Phemera, and recorded.
 
 This TEP records the high-level architecture the maintainers agreed on. An authority backed by Postgres makes every access decision and is managed through a CLI and a web UI via dedicated endpoints.
-A data plane carries the actual sessions. It has one web-gateway, plus optional protocol gateways that let native tools such as `ssh` or an RDP client connect without a Tidegate client. The gateways hand sessions to workers. A worker is either a proxy that reaches its targets directly or a broker that reaches them through an agent running near the target. Optionally, a network load balancer in front of the data plane routes each port to the matching gateway.
+A data plane carries the actual sessions. It has one web-gateway, plus optional protocol gateways that let native tools such as `ssh` or an RDP client connect without a Phemera client. The gateways hand sessions to workers. A worker is either a proxy that reaches its targets directly or a broker that reaches them through an agent running near the target. Optionally, a network load balancer in front of the data plane routes each port to the matching gateway.
 
 The design follows [jumpgate](https://github.com/trevex/jumpgate), an earlier project by one of the maintainers, and extends it with protocol gateways for native clients. The ssh-gateway takes its model from [Warpgate](https://github.com/warp-tech/warpgate), an open source SSH and HTTP bastion that accepts unmodified SSH clients. External secret stores such as OpenBao and external audit log sinks are planned and shape the design, but their details are left to future TEPs.
 
 ## Motivation
 
-Tidegate needs an agreed architecture before work on individual components starts. Without one, each component TEP would have to argue its own assumptions about trust boundaries, how sessions reach targets, and which component owns which decision. This TEP gives those later proposals a shared frame to refer to and to amend.
+Phemera needs an agreed architecture before work on individual components starts. Without one, each component TEP would have to argue its own assumptions about trust boundaries, how sessions reach targets, and which component owns which decision. This TEP gives those later proposals a shared frame to refer to and to amend.
 
-The architecture also has to support a requirement that jumpgate did not address. Jumpgate routes all session traffic through its own CLI or browser, so users have to change their tools. Many users and automation scripts depend on plain `ssh`, `scp`, RDP clients, and database clients. Supporting those clients unchanged makes Tidegate easier to adopt and removes a reason to keep standing credentials around for tooling that cannot use a custom client.
+The architecture also has to support a requirement that jumpgate did not address. Jumpgate routes all session traffic through its own CLI or browser, so users have to change their tools. Many users and automation scripts depend on plain `ssh`, `scp`, RDP clients, and database clients. Supporting those clients unchanged makes Phemera easier to adopt and removes a reason to keep standing credentials around for tooling that cannot use a custom client.
 
 ### Goals
 
-- Define the components of Tidegate, what each one is responsible for, and how they connect.
+- Define the components of Phemera, what each one is responsible for, and how they connect.
 - Define which components are exposed to users and which are internal.
 - Describe the path of a session from request to teardown at a level that later TEPs can refine.
 - Describe how native clients such as `ssh` and RDP clients fit into the architecture.
@@ -66,7 +66,7 @@ These principles guide the component design. Component TEPs that depart from one
 ```mermaid
 flowchart TB
     subgraph clients["Clients"]
-        cli["Tidegate CLI"]
+        cli["Phemera CLI"]
         browser["Web Browser"]
         native["Native clients<br>ssh · RDP client · psql"]
         kubectl["kubectl"]
@@ -123,7 +123,7 @@ flowchart TB
 
 #### Authority
 
-The authority decides every access question in Tidegate. It owns identities, the asset catalog, roles and policies, access requests and approvals, time-limited grants, stored secrets and certificate authorities, the audit log, and the registry of live workers and sessions. It keeps all of this state in Postgres, so authority replicas are stateless and scale horizontally against one database.
+The authority decides every access question in Phemera. It owns identities, the asset catalog, roles and policies, access requests and approvals, time-limited grants, stored secrets and certificate authorities, the audit log, and the registry of live workers and sessions. It keeps all of this state in Postgres, so authority replicas are stateless and scale horizontally against one database.
 
 The authority is composed of the following core components:
 
@@ -133,7 +133,7 @@ The authority is composed of the following core components:
 - **Authorization Engine**: Serves as the central Policy Decision Point (PDP) to evaluate access requests and determine granular permissions.
 - **Postgress**: It is the authority's only source of truth. Operators run it with the guarantees a security system's database needs: replication, backups, and point-in-time recovery. No other component connects to it.
 
-### Tidegate CLI and web UI
+### Phemera CLI and web UI
 
 The CLI and the web UI are the two management clients. Both cover the same access loop: find an asset, request access, approve requests, and start a session. The CLI also starts sessions for protocols that need a local helper, such as a kubeconfig credential plugin for `kubectl`. The web UI starts browser-based sessions, such as an in-browser terminal or remote desktop.
 
@@ -143,7 +143,7 @@ A layer 4 load balancer is the single public entry point for session traffic. It
 
 | Port | Gateway | Typical clients |
 |---|---|---|
-| 443 | web-gateway | Tidegate CLI, browser sessions, `kubectl` |
+| 443 | web-gateway | Phemera CLI, browser sessions, `kubectl` |
 | 22 | ssh-gateway | `ssh`, `scp`, `sftp`, SSH automation |
 | 3389 | rdp-gateway | Native RDP clients |
 | 5432 | pg-gateway | `psql` and other Postgres clients |
@@ -156,22 +156,22 @@ Gateways are the only data plane components exposed to users. They admit session
 
 The **web-gateway** carries all HTTPS-based session traffic. It accepts tunneled sessions from the CLI, WebSocket sessions from the browser, and Kubernetes API requests from `kubectl`. Each request carries a short-lived admission token minted by the authority. The web-gateway verifies the token, selects a worker that serves the session's protocol, and relays bytes between the client and the worker. It does not terminate the target protocol, so adding a protocol that can be tunneled over HTTPS needs a new worker but no web-gateway change.
 
-**Protocol gateways** accept native clients on the protocol's own port. A native client cannot present a Tidegate admission token, so a protocol gateway speaks enough of its protocol to authenticate the user and find out which asset and login the user wants. It then asks the authority to admit the session and hands it to a worker as the web-gateway would. The ssh-gateway, pg-gateway and rdp-gateway are the first expected protocol gateways. Others are added when a protocol has enough users of native tooling to justify one.
+**Protocol gateways** accept native clients on the protocol's own port. A native client cannot present a Phemera admission token, so a protocol gateway speaks enough of its protocol to authenticate the user and find out which asset and login the user wants. It then asks the authority to admit the session and hands it to a worker as the web-gateway would. The ssh-gateway, pg-gateway and rdp-gateway are the first expected protocol gateways. Others are added when a protocol has enough users of native tooling to justify one.
 
 #### Workers
 
 Workers carry sessions to targets. Every worker registers with the authority over the mesh, advertises what it can serve and how much capacity it has, and reports session start and end. For each session a worker re-confirms authorization with the authority, verifies the target's identity, obtains a target credential, injects it, proxies the session, and records it. Workers hold a target credential only for the lifetime of one session.
 
-Tidegate has two kinds of worker:
+Phemera has two kinds of worker:
 
 - A **proxy** connects to its targets directly over the network. It suits targets the data plane can reach, such as SSH servers, Windows hosts over RDP, and databases. Targets need no software installed.
-- A **broker** never connects to targets itself. An agent installed next to the target dials out to the broker and keeps a tunnel open, and the broker sends sessions down that tunnel. This suits targets that accept no inbound connections from the data plane or have restricted authentication options, such as Kubernetes clusters in public clouds. The Kubernetes agent forwards requests to its cluster's API server and impersonates the Tidegate user, so the cluster's own RBAC decides what the user can do.
+- A **broker** never connects to targets itself. An agent installed next to the target dials out to the broker and keeps a tunnel open, and the broker sends sessions down that tunnel. This suits targets that accept no inbound connections from the data plane or have restricted authentication options, such as Kubernetes clusters in public clouds. The Kubernetes agent forwards requests to its cluster's API server and impersonates the Phemera user, so the cluster's own RBAC decides what the user can do.
 
 Each worker serves one protocol. That keeps protocol handling, credential injection, and recording for one protocol in one place, and lets a protocol be added without touching other workers.
 
 #### Agents
 
-An agent runs inside a target environment and connects outward to a broker. It enrolls with the authority using a single-use token to obtain its mesh identity, so it never holds a standing credential issued at install time. Because it only dials out, the target network needs no inbound firewall rule for Tidegate.
+An agent runs inside a target environment and connects outward to a broker. It enrolls with the authority using a single-use token to obtain its mesh identity, so it never holds a standing credential issued at install time. Because it only dials out, the target network needs no inbound firewall rule for Phemera.
 
 #### Internal mesh
 
@@ -179,8 +179,8 @@ Gateways, workers, agents, and the authority talk to each other over a mutually 
 
 ### User stories
 
-- An on-call engineer runs `tidegate connect deploy@web-01.prod`, gets a 30-minute grant approved by a teammate, and lands in a shell. The engineer never sees a password or key for `web-01`.
-- A developer who prefers plain OpenSSH registers a public key on their Tidegate user once and then runs plain `ssh` against the Tidegate SSH endpoint. The session goes through the ssh-gateway with the same authorization, credential injection, and recording as a CLI session.
+- An on-call engineer runs `phemera connect deploy@web-01.prod`, gets a 30-minute grant approved by a teammate, and lands in a shell. The engineer never sees a password or key for `web-01`.
+- A developer who prefers plain OpenSSH registers a public key on their Phemera user once and then runs plain `ssh` against the Phemera SSH endpoint. The session goes through the ssh-gateway with the same authorization, credential injection, and recording as a CLI session.
 - An administrator opens a remote desktop to a Windows server in the browser, or from a native RDP client through the rdp-gateway.
 - A platform engineer runs `kubectl` against a cluster in a customer network that accepts no inbound connections. The request reaches the cluster through a broker and the agent inside the cluster.
 - A security lead revokes a grant during an incident. Every live session that depended on it ends within seconds.
@@ -251,7 +251,7 @@ sequenceDiagram
 
 This section is illustrative. Where a protocol TEP exists, it is the reference for that protocol's flow and takes precedence over this section.
 
-In this example, the ssh-gateway follows the model of Warpgate. A user registers one or more SSH public keys on their Tidegate user, through the CLI or the web UI. The user then connects with a plain `ssh` client and names the target asset and login in the SSH username, the way Warpgate encodes user and target in the username. The ssh-gateway checks the presented key against the keys registered for that user, asks the authority to admit the session, and hands it to an ssh-proxy. The user's key only proves identity to Tidegate. It is never installed on a target, and the target hop uses a per-session credential issued by the authority as in every other flow.
+In this example, the ssh-gateway follows the model of Warpgate. A user registers one or more SSH public keys on their Phemera user, through the CLI or the web UI. The user then connects with a plain `ssh` client and names the target asset and login in the SSH username, the way Warpgate encodes user and target in the username. The ssh-gateway checks the presented key against the keys registered for that user, asks the authority to admit the session, and hands it to an ssh-proxy. The user's key only proves identity to Phemera. It is never installed on a target, and the target hop uses a per-session credential issued by the authority as in every other flow.
 
 This model keeps `ssh`, `scp`, `sftp`, `rsync`, and SSH-based automation working with only a changed host and username. The ssh-gateway TEP decides whether to adopt it and settles details such as the username syntax, whether keyboard-interactive authentication can add a second factor or a browser-confirmed login, and how access requests are raised when a user connects without a current grant.
 
@@ -259,7 +259,7 @@ Other protocol gateways need their own authentication design, defined in their p
 
 ### Brokers and agents
 
-The broker and agent pair reverses the direction of the connection so Tidegate never needs inbound access to a target network.
+The broker and agent pair reverses the direction of the connection so Phemera never needs inbound access to a target network.
 
 ```mermaid
 flowchart LR
@@ -278,7 +278,7 @@ The authority keeps a ledger of live sessions and the grant or binding each one 
 
 ### Trust zones
 
-To adhere to the Principle of Least Privilege, Tidegate is designed modular, requiring its individual modules to reside in distinct trust zones.
+To adhere to the Principle of Least Privilege, Phemera is designed modular, requiring its individual modules to reside in distinct trust zones.
 
 ```mermaid
 flowchart LR
@@ -320,9 +320,9 @@ The **edge zone** accepts inbound connections from untrusted networks. Load bala
 
 The authority offers an external and one or more internal APIs. The internal APIs MUST be isolated in **core zone** , including the authority engine and the database. The external authority API CAN be isolated in **core zone** by an operator behind a load balancer or a firewall or a similar component. Core zone MUST not be connected to untrusted zones, but MUST accept inbound connections exclusively from inside the **edge zone**. The exception to this is the external authority API if configured to be in the **edge zone**.
 
-Targets reached through agents MUST accept no inbound connections from Tidegate at all. Agents reside in **target network** and initiate outbound connections to the PAM on its own.
+Targets reached through agents MUST accept no inbound connections from Phemera at all. Agents reside in **target network** and initiate outbound connections to the PAM on its own.
 
-Its up to Tidegate's operator to set trust zones accordingly.
+Its up to Phemera's operator to set trust zones accordingly.
 
 ### Future extensions
 
@@ -344,7 +344,7 @@ flowchart LR
 
 ## Security considerations
 
-- Trust boundaries. The edge zone (load balancer, gateways, authority endpoint) is the only part reachable from user networks. The authority is the most trusted component and the only one with access to Postgres, stored secrets, and certificate authorities. Workers are trusted to handle one session's credential at a time. Agents are trusted only for their own target. Protocol gateways move part of user authentication into the data plane, which is a new boundary compared with jumpgate; their TEPs must define what a gateway may assert to the authority about a user. SSH public keys registered on a user authenticate that user to Tidegate only. A stolen private key lets an attacker act as the user within the user's current grants, so the ssh-gateway TEP must address key revocation and whether a second factor is required for sensitive assets.
+- Trust boundaries. The edge zone (load balancer, gateways, authority endpoint) is the only part reachable from user networks. The authority is the most trusted component and the only one with access to Postgres, stored secrets, and certificate authorities. Workers are trusted to handle one session's credential at a time. Agents are trusted only for their own target. Protocol gateways move part of user authentication into the data plane, which is a new boundary compared with jumpgate; their TEPs must define what a gateway may assert to the authority about a user. SSH public keys registered on a user authenticate that user to Phemera only. A stolen private key lets an attacker act as the user within the user's current grants, so the ssh-gateway TEP must address key revocation and whether a second factor is required for sensitive assets.
 - Privilege. Access comes from time-limited grants or standing bindings evaluated by the authority. Target credentials are minted per session and expire no later than the authorization behind them. Live sessions end when that authorization ends.
 - Credentials and secrets. Users never receive target credentials. Workers receive one per session, only after the target's identity is verified. Stored secrets and CA keys are encrypted at rest in Postgres and never returned through the API. Mesh identities are short-lived certificates issued by the authority.
 - Audit. Every access request, approval, grant, credential issuance, session start, session end, and forced teardown is written to a tamper-evident audit log in the authority. Sessions are recorded by workers, and retrieving a recording is audited.
@@ -353,7 +353,7 @@ flowchart LR
 
 ## Compatibility and upgrade
 
-Tidegate has no released version yet, so this TEP has no compatibility impact. Component TEPs define compatibility rules for their APIs and formats.
+Phemera has no released version yet, so this TEP has no compatibility impact. Component TEPs define compatibility rules for their APIs and formats.
 
 ## Test plan
 
@@ -383,7 +383,7 @@ Exposing workers directly to clients would remove the gateways. Every worker wou
 
 Using agents for every target would make all access outbound-only. It would also require installing software on every target, which many organizations cannot do for appliances, managed databases, and legacy hosts. Supporting both proxies and brokers keeps agentless access for reachable targets and outbound-only access where it is needed.
 
-Supporting only the Tidegate CLI and browser, as jumpgate did, would avoid protocol gateways. It would also force users and automation off their existing tools, which this TEP treats as a barrier to adoption.
+Supporting only the Phemera CLI and browser, as jumpgate did, would avoid protocol gateways. It would also force users and automation off their existing tools, which this TEP treats as a barrier to adoption.
 
 ## Unresolved questions
 

@@ -1,5 +1,5 @@
 name: TEP tracking issue
-description: Propose a significant change to Tidegate and track its TEP.
+description: Propose a significant change to Phemera and track its TEP.
 title: "TEP: "
 labels: ["tep"]
 body:
@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Use this issue to describe the problem and gather early feedback before writing a full TEP.
-        See [TEP-0001](https://github.com/tidegate-dev/enhancements/blob/main/teps/0001-tep-process/README.md) for the process.
+        See [TEP-0001](https://github.com/phemera-dev/enhancements/blob/main/teps/0001-tep-process/README.md) for the process.
   - type: textarea
     id: problem
     attributes:

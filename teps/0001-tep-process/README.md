@@ -17,11 +17,11 @@ superseded-by: []
 
 ## Summary
 
-This TEP defines the Tidegate Enhancement Proposal process: what a TEP is, when one is required, how it moves from idea to shipped feature, and who decides. Changes to this process are themselves made through a TEP that amends or replaces this one.
+This TEP defines the Phemera Enhancement Proposal process: what a TEP is, when one is required, how it moves from idea to shipped feature, and who decides. Changes to this process are themselves made through a TEP that amends or replaces this one.
 
 ## Motivation
 
-Tidegate is a privileged access management system. It decides who may reach production systems, for how long, and with which permissions. Design mistakes in such a system turn into security incidents, and they are expensive to fix once deployments depend on the behavior.
+Phemera is a privileged access management system. It decides who may reach production systems, for how long, and with which permissions. Design mistakes in such a system turn into security incidents, and they are expensive to fix once deployments depend on the behavior.
 
 Without a written process, large changes get designed in chat threads and pull request comments. The reasoning is hard to find later, security review depends on whoever happened to be watching, and new contributors cannot tell how to propose something big. A lightweight proposal process fixes that while the project is small enough for the process to stay simple.
 
@@ -60,7 +60,7 @@ Bug fixes, refactors, documentation, and behavior-preserving improvements do not
 
 - Author: Writes the TEP, responds to feedback, and keeps the status current. A TEP can have several authors.
 - Approver: A maintainer who signs off on the TEP. Approvers are listed in the front matter. An author cannot be the only approver of their own TEP, except for this bootstrapping TEP.
-- Maintainers: Until a governance document says otherwise, the maintainers are the members of the `tidegate-dev` GitHub organization with write access to this repository.
+- Maintainers: Until a governance document says otherwise, the maintainers are the members of the `phemera-dev` GitHub organization with write access to this repository.
 
 ### Lifecycle
 
@@ -160,7 +160,7 @@ The process adds a week or more before significant work can start, because of th
 
 Design discussions in GitHub issues alone would cost less effort, but issues are hard to keep as a coherent current design and do not give a natural place for structured security review.
 
-Adopting the Kubernetes KEP process unchanged would bring production readiness reviews, SIG ownership, and per-release tracking that a project of Tidegate's size does not need yet. This TEP keeps the KEP status model and template structure and drops the rest. Later TEPs can add pieces back as the project grows.
+Adopting the Kubernetes KEP process unchanged would bring production readiness reviews, SIG ownership, and per-release tracking that a project of Phemera's size does not need yet. This TEP keeps the KEP status model and template structure and drops the rest. Later TEPs can add pieces back as the project grows.
 
 ## Unresolved questions
 

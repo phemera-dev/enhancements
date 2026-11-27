@@ -6,7 +6,7 @@ authors:
   - "@your-github-handle"
 approvers:
   - "@approver-github-handle"
-tracking-issue: https://github.com/tidegate-dev/enhancements/issues/0
+tracking-issue: https://github.com/phemera-dev/enhancements/issues/0
 created: 2026-01-01
 last-updated: 2026-01-01
 replaces: []
@@ -107,7 +107,7 @@ machines, and interactions between components. Diagrams help.
 <!--
 Required for provisional (a first pass), complete for implementable.
 
-Tidegate brokers privileged access, so every TEP must answer these questions,
+Phemera brokers privileged access, so every TEP must answer these questions,
 even if the answer is "not affected":
 
 - Trust boundaries: which components, users, or external systems does this
@@ -121,7 +121,7 @@ even if the answer is "not affected":
 - Failure behavior: when a dependency is unavailable or returns an error, does
   the system fail closed (deny access)? If not, why is that acceptable?
 - Threat model: which attackers are in scope (malicious requester, compromised
-  approver, compromised Tidegate component, network attacker) and how does the
+  approver, compromised Phemera component, network attacker) and how does the
   design hold up against each?
 -->
 
@@ -181,5 +181,5 @@ Major milestones, with dates and links. For example:
 
 - 2026-01-01: TEP merged as provisional (#12)
 - 2026-02-15: Moved to implementable (#20)
-- 2026-04-01: Shipped in Tidegate v0.3.0
+- 2026-04-01: Shipped in Phemera v0.3.0
 -->

@@ -1,6 +1,6 @@
-# Tidegate enhancements
+# Phemera enhancements
 
-This repository holds Tidegate Enhancement Proposals (TEPs). A TEP is a design document that describes a significant change to Tidegate, the reasoning behind it, and how it will be built and rolled out. The process is modeled on Kubernetes KEPs and Python PEPs, scaled down for a young project.
+This repository holds Phemera Enhancement Proposals (TEPs). A TEP is a design document that describes a significant change to Phemera, the reasoning behind it, and how it will be built and rolled out. The process is modeled on Kubernetes KEPs and Python PEPs, scaled down for a young project.
 
 TEPs exist so that design decisions happen in the open and leave a record. Code review shows how something was built. A TEP shows why it was built that way, which alternatives were rejected, and what security tradeoffs were accepted. For a privileged access management system, that record matters to contributors and to the people who have to trust the software.
 
@@ -61,4 +61,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for pull request titles and how to sign o
 
 ## License
 
-All TEPs are licensed under the [Apache License 2.0](LICENSE), the same license as Tidegate.
+All TEPs are licensed under the [Apache License 2.0](LICENSE), the same license as Phemera.

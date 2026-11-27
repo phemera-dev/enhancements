@@ -5,7 +5,7 @@ status: draft
 authors:
   - "@trevex"
 approvers:
-  - "@tidegate-dev/maintainers"
+  - "@phemera-dev/maintainers"
 tracking-issue: null
 created: 2026-10-02
 last-updated: 2026-11-04
@@ -17,9 +17,9 @@ superseded-by: []
 
 ## Summary
 
-This TEP defines the resources the Tidegate authority stores and the rules it uses to decide who may do what. It is a starting model agreed over several maintainer meetings, and later TEPs are expected to refine it.
+This TEP defines the resources the Phemera authority stores and the rules it uses to decide who may do what. It is a starting model agreed over several maintainer meetings, and later TEPs are expected to refine it.
 
-The organization is the top level of the model. For now a Tidegate instance serves exactly one organization, which stays implicit: it is not stored and does not appear in the API. The organization holds users, identity providers, and organization roles that govern administration, such as who manages users or creates and recovers projects. All access to infrastructure lives in projects. A project holds assets, groups, roles, bindings, and access policies. An asset is one project's access definition for a target. Assets carry labels, and a project role uses label selectors and typed, protocol-specific permissions to describe access, such as logging in over SSH as `root`. A binding gives a role to a user or group, either as standing access or for a limited time after an approved access request.
+The organization is the top level of the model. For now a Phemera instance serves exactly one organization, which stays implicit: it is not stored and does not appear in the API. The organization holds users, identity providers, and organization roles that govern administration, such as who manages users or creates and recovers projects. All access to infrastructure lives in projects. A project holds assets, groups, roles, bindings, and access policies. An asset is one project's access definition for a target. Assets carry labels, and a project role uses label selectors and typed, protocol-specific permissions to describe access, such as logging in over SSH as `root`. A binding gives a role to a user or group, either as standing access or for a limited time after an approved access request.
 
 The model borrows its shape from Kubernetes RBAC. An organization role works like a ClusterRole, a project works like a namespace, and a project role works like a Role.
 
@@ -27,9 +27,9 @@ The model borrows its shape from Kubernetes RBAC. An organization role works lik
 
 Every component described in [TEP-0002](../0002-architecture/README.md) depends on the authority's data model. The API, the CLI, the web UI, the access request flow, and the authorization checks made on behalf of gateways and workers all need the same vocabulary. Agreeing on it before the API TEPs start keeps those TEPs from inventing incompatible versions of the same concepts.
 
-Jumpgate, Tidegate's predecessor, organized assets in a folder tree and let roles cascade down folders through rewrite rules. That model is expressive, but access depends on where an asset sits in the tree and on which rules a role carries, which makes it hard to see why someone has access. The maintainers want a flatter model in which access follows from a short chain of explicit records: a binding, a role, a matching asset rule, and the typed permission that allowed the operation. Labels also suit assets that are discovered or managed by automation, because tooling can set labels without placing assets in a hierarchy.
+Jumpgate, Phemera's predecessor, organized assets in a folder tree and let roles cascade down folders through rewrite rules. That model is expressive, but access depends on where an asset sits in the tree and on which rules a role carries, which makes it hard to see why someone has access. The maintainers want a flatter model in which access follows from a short chain of explicit records: a binding, a role, a matching asset rule, and the typed permission that allowed the operation. Labels also suit assets that are discovered or managed by automation, because tooling can set labels without placing assets in a hierarchy.
 
-The model also has to separate administration of Tidegate from access through Tidegate. In a PAM system, holding an organization role that manages users or identity providers should not grant shell access to production as a side effect, and owning a project should not allow changing organization settings. This separation covers roles and bindings inside Tidegate. Groups mapped to an identity provider extend trust to whoever manages group membership at that provider, as described under [Groups](#groups) and [Security considerations](#security-considerations).
+The model also has to separate administration of Phemera from access through Phemera. In a PAM system, holding an organization role that manages users or identity providers should not grant shell access to production as a side effect, and owning a project should not allow changing organization settings. This separation covers roles and bindings inside Phemera. Groups mapped to an identity provider extend trust to whoever manages group membership at that provider, as described under [Groups](#groups) and [Security considerations](#security-considerations).
 
 ### Goals
 
@@ -94,7 +94,7 @@ erDiagram
 | OrgBinding | Organization | ClusterRoleBinding | Gives an OrgRole to a user or a shared group. |
 | Project | Organization | Namespace | Boundary for assets and the access rules that apply to them. |
 | Group | Project | none | A set of users and other groups. Optionally shared with other projects, optionally mapped to an IdP group. |
-| Asset | Project | none | One project's access definition for a target, including how Tidegate identifies and connects to it. Carries labels. |
+| Asset | Project | none | One project's access definition for a target, including how Phemera identifies and connects to it. Carries labels. |
 | Role | Project | Role | Well-defined asset access rules and project-wide governance permissions. |
 | Binding | Project | RoleBinding | Gives a Role to a user or group, permanently or until an expiry time. |
 | AccessPolicy | Project | none | Says who may request a Role, who approves, and for how long. |
@@ -104,7 +104,7 @@ erDiagram
 
 An organization is the tenant boundary. Users, identity providers, organization roles and bindings, and projects belong to one organization, and no reference crosses from one organization to another.
 
-The organization is part of the model but will not be implemented for now. A Tidegate instance serves exactly one organization, and that organization is the instance itself. The authority stores no organization record and no organization identifier on other records, and no interface or bootstrap document needs to name an organization. Organization-level resources are therefore unique across the instance.
+The organization is part of the model but will not be implemented for now. A Phemera instance serves exactly one organization, and that organization is the instance itself. The authority stores no organization record and no organization identifier on other records, and no interface or bootstrap document needs to name an organization. Organization-level resources are therefore unique across the instance.
 
 Hosting several organizations in one instance is a possible future feature. It would make the organization an explicit resource and require a migration that assigns existing records to a default organization and scopes names and queries by it. This TEP avoids choices that would make that harder: no reference relies on there being only one organization in a way that a default organization could not satisfy.
 
@@ -126,7 +126,7 @@ Conceptually, the spec separates `organization` permissions from `project` permi
 
 The initial model has no project selector on an OrgRole. A cross-project governance permission therefore applies to every project. Organizations that need administration limited to one project use a Role and Binding in that project. More granular OrgRole fields can be added when concrete user needs justify them.
 
-Organization roles never grant access to assets. A user who holds a superadmin OrgRole cannot open a session to any asset until a project binding gives them a project role. This keeps the administrators of Tidegate itself separate from the people who use it to reach infrastructure, and makes access to assets visible in exactly one place: project bindings.
+Organization roles never grant access to assets. A user who holds a superadmin OrgRole cannot open a session to any asset until a project binding gives them a project role. This keeps the administrators of Phemera itself separate from the people who use it to reach infrastructure, and makes access to assets visible in exactly one place: project bindings.
 
 Project recovery is an explicit OrgRole governance permission. It allows its holder to recover a project whose administrators have left by atomically ensuring that the standard project-administrator Role exists and creating a Binding from that role to themselves. It cannot bind an arbitrary Role, and it does not itself authorize an asset session. Every recovery is a distinct audit event.
 
@@ -159,17 +159,17 @@ This TEP uses `shared` as the model term. The future API TEP may choose a differ
 
 Every cross-project group reference names both the owning project and the group. A bare group name is resolved only within the current project, so shared groups with the same name in different projects remain unambiguous.
 
-A group can also carry an external reference to a group at an identity provider. A user who signs in through that IdP and presents the referenced group in their group claim becomes a member of the Tidegate group for as long as the claim says so. Tidegate never maps IdP groups implicitly: an IdP group named `admins` has no effect until some Tidegate group references it by provider and value. An external reference names the IdP as well as the group value, so a group claim from one provider cannot satisfy a reference meant for another.
+A group can also carry an external reference to a group at an identity provider. A user who signs in through that IdP and presents the referenced group in their group claim becomes a member of the Phemera group for as long as the claim says so. Phemera never maps IdP groups implicitly: an IdP group named `admins` has no effect until some Phemera group references it by provider and value. An external reference names the IdP as well as the group value, so a group claim from one provider cannot satisfy a reference meant for another.
 
-An external reference makes the IdP's group administrators part of the Tidegate group's trust: whoever can add a user to the IdP group grants that user the Tidegate group's access, including themselves. For this reason mapping is opt-in per group, and a project can keep its sensitive groups limited to explicitly listed members.
+An external reference makes the IdP's group administrators part of the Phemera group's trust: whoever can add a user to the IdP group grants that user the Phemera group's access, including themselves. For this reason mapping is opt-in per group, and a project can keep its sensitive groups limited to explicitly listed members.
 
 A group can combine an external reference with explicitly listed members. Membership is then the union of both.
 
 ### Assets and labels
 
-An Asset is a project-scoped access definition for a target that Tidegate brokers access to, such as an SSH host, a Windows host, a database, a Kubernetes cluster, or another kind supported by a worker. It describes how Tidegate identifies and connects to that target; it is not a globally unique record of the underlying machine, database, or cluster. Every asset belongs to exactly one project and has a kind, a name unique within its project, and kind-specific configuration defined by the asset catalog and worker TEPs.
+An Asset is a project-scoped access definition for a target that Phemera brokers access to, such as an SSH host, a Windows host, a database, a Kubernetes cluster, or another kind supported by a worker. It describes how Phemera identifies and connects to that target; it is not a globally unique record of the underlying machine, database, or cluster. Every asset belongs to exactly one project and has a kind, a name unique within its project, and kind-specific configuration defined by the asset catalog and worker TEPs.
 
-Different projects can define separate assets for the same underlying system or endpoint. Each definition is administered independently and can use different credentials or credential references, protocol settings, labels, roles, and access policies. Tidegate does not link those definitions or treat changes to one as changes to the others. This lets each project own its access path without depending on an organization administrator or another project.
+Different projects can define separate assets for the same underlying system or endpoint. Each definition is administered independently and can use different credentials or credential references, protocol settings, labels, roles, and access policies. Phemera does not link those definitions or treat changes to one as changes to the others. This lets each project own its access path without depending on an organization administrator or another project.
 
 Assets carry labels: key-value pairs in the style of Kubernetes object labels, such as `env: prod` or `team: payments`. Labels are the only way roles select assets. A project does not predeclare label keys or restrict assets to an allowed key set; assets may use any label accepted by the concrete label syntax chosen by the future API TEP. Changing an asset's labels can therefore change who has access to it, so updating labels requires its own project-wide permission, described under [Project-wide permissions](#project-wide-permissions).
 
@@ -394,7 +394,7 @@ In this example, members of the IdP group `admin` at the `github` provider becom
 - Label changes change access. Adding `env: prod` to an asset makes every asset rule that selects `env: prod` applicable to it. Changing labels requires a dedicated project-wide permission, label changes are audited, and the access check always evaluates current labels so the effect is immediate and visible.
 - Separate assets can reach the same underlying system. Revoking or changing one project's asset does not affect another project's definition for the same endpoint. Operators must update each definition when a shared target changes, and audit records identify the project and asset used for each session.
 - Shared groups widen the impact of a membership change. Adding a user to a shared group can grant access in projects the group owner never looks at. Only the owning project can change membership, and the audit record of a membership change lists where the group is referenced.
-- IdP-derived membership can be stale. A user removed from an IdP group keeps the Tidegate membership until their claims are refreshed. Claims are refreshed on every sign-in and token refresh, and the session lifetime bounds how long stale membership can last.
+- IdP-derived membership can be stale. A user removed from an IdP group keeps the Phemera membership until their claims are refreshed. Claims are refreshed on every sign-in and token refresh, and the session lifetime bounds how long stale membership can last.
 - Break-glass accounts bypass the IdP and its offboarding process. Local login has its own mandatory second factor, is opt-in per user, and produces a distinct audit event. The number of such accounts is expected to be small and operators must manage their lifecycle explicitly.
 - An asset access rule with `selector: {}` applies to every asset in the project, including assets added later. The API and UI show such rules as matching all project assets, and the escalation check treats their typed permissions accordingly. Omitting the required selector is rejected instead of silently broadening access.
 
@@ -446,7 +446,7 @@ Organization-level resources have names unique within the organization for their
 
 ## Security considerations
 
-- Trust boundaries. Identity providers are trusted to authenticate users and to assert group claims, but only for the groups that Tidegate explicitly maps, and only for the provider each mapping names. Using an IdP for sign-in already places it inside the trust boundary, because an IdP administrator who can sign in as a user holds that user's access in Tidegate. Multi-factor authentication with a factor only the user holds, such as a hardware key, prevents this kind of impersonation. It does not prevent an IdP administrator from adding their own account to a mapped IdP group and so granting themselves access. Group mapping is opt-in per group for this reason. Projects form an administrative boundary: a project's administrators can affect other projects only through groups they share.
+- Trust boundaries. Identity providers are trusted to authenticate users and to assert group claims, but only for the groups that Phemera explicitly maps, and only for the provider each mapping names. Using an IdP for sign-in already places it inside the trust boundary, because an IdP administrator who can sign in as a user holds that user's access in Phemera. Multi-factor authentication with a factor only the user holds, such as a hardware key, prevents this kind of impersonation. It does not prevent an IdP administrator from adding their own account to a mapped IdP group and so granting themselves access. Group mapping is opt-in per group for this reason. Projects form an administrative boundary: a project's administrators can affect other projects only through groups they share.
 - Privilege. Access to assets comes only from project bindings. Organization roles cannot reach assets, so compromising an organization administrator does not grant sessions directly. Organization governance can still lead to access indirectly: depending on the OrgRole spec, an administrator may change IdP configuration or group mappings, administer project resources, or invoke project recovery and then delegate project roles. Organization roles must therefore be guarded at least as closely as the most sensitive project. Temporary bindings expire, and the escalation check prevents users from granting permissions they are not entitled to delegate outside these explicit governance paths.
 - Credentials and secrets. Local passwords are stored only as self-describing hashes, initially Argon2id PHC strings. IdP client secrets and secret material used by second factors are encrypted at rest; password hashes and secrets are never returned through the API. Bootstrap rejects plaintext passwords, unsupported hash algorithms, hashes below the configured security policy, and local-login users without an accepted second factor. Interactive initial-administrator creation reads the password without exposing it in process arguments or logs.
 - Audit. Every create, update, and delete of a resource in this model is audited, along with project recovery, access requests, approvals, denials, revocations, binding expiry, IdP-derived membership changes, and local logins. The audit record of an access decision names the binding, role, matching asset rule, and typed permission that allowed it.
@@ -455,7 +455,7 @@ Organization-level resources have names unique within the organization for their
 
 ## Compatibility and upgrade
 
-Tidegate has no released version, so this TEP has no compatibility impact. The authority API TEP defines how resource versions evolve.
+Phemera has no released version, so this TEP has no compatibility impact. The authority API TEP defines how resource versions evolve.
 
 ## Test plan
 
@@ -477,7 +477,7 @@ The model is implemented together with the authority. A likely order:
 - Cross-project governance permissions are broad because the initial OrgRole model has no project selector. Sensitive permissions, especially project recovery, require careful assignment and prominent auditing.
 - Typed permission trees are more verbose than generic resource-and-verb rules, and adding a new governance operation requires evolving the corresponding schema. The extra structure makes permissions discoverable and prevents unvalidated strings from silently acquiring meaning.
 - Labels are flat. Organizations used to a folder hierarchy, as in jumpgate, have to express their structure through label conventions.
-- Projects that access the same underlying system duplicate some asset configuration and must coordinate target changes outside Tidegate.
+- Projects that access the same underlying system duplicate some asset configuration and must coordinate target changes outside Phemera.
 - Shared groups create dependencies between projects that are not visible from the referencing side without tooling.
 - Without deny rules, removing access for one asset from a broad role means narrowing the role's selector or splitting the role.
 
@@ -489,11 +489,11 @@ Storing an organization identifier on every record now, with a single organizati
 
 Making an asset an organization-level resource that can belong to several projects would avoid duplicate endpoint configuration. It would also require organization-wide ownership or a separate sharing and binding model, make project administrators depend on another owner for asset changes, and complicate projects that need different credentials or levels of control over the same target. The initial model instead keeps each Asset in exactly one project. More advanced sharing can be added later if concrete use cases outweigh that administrative cost.
 
-Using Kubernetes `PolicyRule` objects directly, with generic resource and verb strings, would make governance permissions compact and easy to extend. It would also reintroduce the stringly capability model this TEP rejects and would not naturally express protocol-specific asset access such as SSH accounts or Kubernetes impersonation groups. Tidegate instead borrows Kubernetes' additive rule lists, label selectors, and explicit `bind` and `escalate` controls while keeping permission fields typed.
+Using Kubernetes `PolicyRule` objects directly, with generic resource and verb strings, would make governance permissions compact and easy to extend. It would also reintroduce the stringly capability model this TEP rejects and would not naturally express protocol-specific asset access such as SSH accounts or Kubernetes impersonation groups. Phemera instead borrows Kubernetes' additive rule lists, label selectors, and explicit `bind` and `escalate` controls while keeping permission fields typed.
 
 A single level of roles, where organization administration is expressed as fields in the Role spec of some special project, would remove the OrgRole and OrgBinding kinds. It would also let a project administrator of that special project gain organization rights, and it would mix governance and access in one evaluation path.
 
-Implicit mapping of IdP groups to Tidegate groups by name would remove a configuration step. It would also let anyone who can create groups at the IdP grant themselves membership in any Tidegate group with the same name.
+Implicit mapping of IdP groups to Phemera groups by name would remove a configuration step. It would also let anyone who can create groups at the IdP grant themselves membership in any Phemera group with the same name.
 
 Deny rules that override grants from other bindings would allow carving exceptions out of broad roles. They make the result of an access check depend on the interaction of several independent rules, which works against explaining access through a single binding. This does not preclude a future typed, protocol-specific exclusion that locally narrows one permission in a Role.
 

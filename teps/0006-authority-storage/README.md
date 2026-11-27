@@ -5,7 +5,7 @@ status: draft
 authors:
   - "@The127"
 approvers:
-  - "@tidegate-dev/maintainers"
+  - "@phemera-dev/maintainers"
 tracking-issue: null
 created: 2026-11-06
 last-updated: 2026-11-06
@@ -249,4 +249,4 @@ A first change adds `model`, `store` and the unit of work for every table and mo
 
 ## Implementation history
 
-- 2026-11-06: Draft opened in [#16](https://github.com/tidegate-dev/enhancements/pull/16).
+- 2026-11-06: Draft opened in [#16](https://github.com/phemera-dev/enhancements/pull/16).

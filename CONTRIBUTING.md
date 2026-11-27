@@ -1,6 +1,6 @@
-# Contributing to Tidegate enhancements
+# Contributing to Phemera enhancements
 
-Thanks for your interest in contributing. This repository holds Tidegate Enhancement Proposals (TEPs). This guide explains how to open a pull request here and what we look for in it.
+Thanks for your interest in contributing. This repository holds Phemera Enhancement Proposals (TEPs). This guide explains how to open a pull request here and what we look for in it.
 
 Please follow our [Code of Conduct](CODE_OF_CONDUCT.md) in all project spaces.
 
@@ -63,4 +63,4 @@ git push --force-with-lease
 
 ## License
 
-By contributing, you agree that your contributions are licensed under the [Apache License 2.0](LICENSE), the same license as Tidegate.
+By contributing, you agree that your contributions are licensed under the [Apache License 2.0](LICENSE), the same license as Phemera.
