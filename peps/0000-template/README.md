@@ -1,28 +1,28 @@
 ---
-tep: 0000
+pep: 0000
 title: Short descriptive title
 status: draft
 authors:
   - "@your-github-handle"
 approvers:
   - "@approver-github-handle"
-tracking-issue: https://github.com/tidegate-dev/enhancements/issues/0
+tracking-issue: https://github.com/phemera-dev/enhancements/issues/0
 created: 2026-01-01
 last-updated: 2026-01-01
 replaces: []
 superseded-by: []
 ---
 
-# TEP-0000: Short descriptive title
+# PEP-0000: Short descriptive title
 
 <!--
 How to use this template:
 
-1. Copy this directory to teps/NNNN-short-title/ using the next free number.
+1. Copy this directory to peps/NNNN-short-title/ using the next free number.
 2. Fill in the front matter above. Keep `status: draft` until the PR is merged.
 3. Replace the guidance comments below with your content. Delete comments once a
    section is written. Sections marked "required for provisional" must have
-   content before the first merge. The rest must be complete before the TEP
+   content before the first merge. The rest must be complete before the PEP
    moves to `implementable`.
 4. If a section does not apply, keep the heading and write one sentence saying
    why. Reviewers need to see that it was considered.
@@ -54,7 +54,7 @@ requests that show the problem is real.
 <!--
 Required for provisional.
 
-A short list of outcomes this TEP commits to. Each goal should be specific
+A short list of outcomes this PEP commits to. Each goal should be specific
 enough that someone can later check whether it was met.
 -->
 
@@ -107,7 +107,7 @@ machines, and interactions between components. Diagrams help.
 <!--
 Required for provisional (a first pass), complete for implementable.
 
-Tidegate brokers privileged access, so every TEP must answer these questions,
+Phemera brokers privileged access, so every PEP must answer these questions,
 even if the answer is "not affected":
 
 - Trust boundaries: which components, users, or external systems does this
@@ -121,7 +121,7 @@ even if the answer is "not affected":
 - Failure behavior: when a dependency is unavailable or returns an error, does
   the system fail closed (deny access)? If not, why is that acceptable?
 - Threat model: which attackers are in scope (malicious requester, compromised
-  approver, compromised Tidegate component, network attacker) and how does the
+  approver, compromised Phemera component, network attacker) and how does the
   design hold up against each?
 -->
 
@@ -170,7 +170,7 @@ Other designs that were considered and why they were not chosen. Include
 ## Unresolved questions
 
 <!--
-Open questions that need answers before the TEP can move to the next status.
+Open questions that need answers before the PEP can move to the next status.
 Remove this section, or leave it empty, once everything is resolved.
 -->
 
@@ -179,7 +179,7 @@ Remove this section, or leave it empty, once everything is resolved.
 <!--
 Major milestones, with dates and links. For example:
 
-- 2026-01-01: TEP merged as provisional (#12)
+- 2026-01-01: PEP merged as provisional (#12)
 - 2026-02-15: Moved to implementable (#20)
-- 2026-04-01: Shipped in Tidegate v0.3.0
+- 2026-04-01: Shipped in Phemera v0.3.0
 -->

@@ -1,11 +1,11 @@
 ---
-tep: 0005
+pep: 0005
 title: Gateway routing and session lifecycle
 status: draft
 authors:
   - "@trevex"
 approvers:
-  - "@tidegate-dev/maintainers"
+  - "@phemera-dev/maintainers"
 tracking-issue: null
 created: 2026-10-19
 last-updated: 2026-11-04
@@ -13,13 +13,13 @@ replaces: []
 superseded-by: []
 ---
 
-# TEP-0005: Gateway routing and session lifecycle
+# PEP-0005: Gateway routing and session lifecycle
 
 ## Summary
 
-This TEP defines how Tidegate turns an authenticated client request into a proxied session. A client or ingress gateway presents authentication material to the authority and asks it to create a session for an exact asset, protocol, action, and qualifier such as an SSH login. The authority derives the user, checks current authorization, and returns a short-lived, single-use admission ticket. The session-gateway selects a compatible worker, and the worker redeems the ticket before it receives target details or a target credential.
+This PEP defines how Phemera turns an authenticated client request into a proxied session. A client or ingress gateway presents authentication material to the authority and asks it to create a session for an exact asset, protocol, action, and qualifier such as an SSH login. The authority derives the user, checks current authorization, and returns a short-lived, single-use admission ticket. The session-gateway selects a compatible worker, and the worker redeems the ticket before it receives target details or a target credential.
 
-TEP-0002 names the central decision-making component the `authority`; this TEP uses that name throughout. TEP-0002 calls the HTTPS entry point the `web-gateway`. This TEP proposes `session-gateway` because the component routes browser sessions, CLI tunnels, and tunnels opened by protocol gateways.
+PEP-0002 names the central decision-making component the `authority`; this PEP uses that name throughout. PEP-0002 calls the HTTPS entry point the `web-gateway`. This PEP proposes `session-gateway` because the component routes browser sessions, CLI tunnels, and tunnels opened by protocol gateways.
 
 All ingress paths use the same authority and worker lifecycle:
 
@@ -31,7 +31,7 @@ The ssh-gateway is trusted to report successful client authentication. The autho
 
 ## Motivation
 
-[TEP-0002](../0002-architecture/README.md) defines the authority, gateways, and workers at a high level. It leaves several session details open: how a gateway proves who it authenticated, what a session-creation request may contain, how replay is prevented, when a worker owns a session, and when a target credential may be released.
+[PEP-0002](../0002-architecture/README.md) defines the authority, gateways, and workers at a high level. It leaves several session details open: how a gateway proves who it authenticated, what a session-creation request may contain, how replay is prevented, when a worker owns a session, and when a target credential may be released.
 
 Native SSH also needs a clear trust decision. A nested SSH design can keep session contents and user authentication opaque to the ssh-gateway, but it requires two SSH handshakes, generated jump-host configuration, and an SSH server in the worker. This proposal trusts the ssh-gateway as the client-facing SSH endpoint. Users make one ordinary SSH connection, while the worker and authority retain control over authorization, target identity, credentials, recording, and revocation.
 
@@ -49,14 +49,14 @@ Native SSH also needs a clear trust decision. A nested SSH design can keep sessi
 
 ### Non-goals
 
-- Defining the role, binding, and access-request model. [TEP-0003](../0003-data-model/README.md) defines those resources.
-- Defining protobuf messages, package names, or the worker stream framing. A later API TEP specifies those wire formats.
+- Defining the role, binding, and access-request model. [PEP-0003](../0003-data-model/README.md) defines those resources.
+- Defining protobuf messages, package names, or the worker stream framing. A later API PEP specifies those wire formats.
 - Choosing an SSH library or recording container.
 - Defining the exact SSH username syntax used to name an asset and target login.
-- Designing protocol gateways other than SSH. They use the lifecycle in this TEP but need protocol-specific authentication and translation rules.
-- Allowing arbitrary TCP forwarding through Tidegate. A worker connects only to the endpoint of the authorized asset.
+- Designing protocol gateways other than SSH. They use the lifecycle in this PEP but need protocol-specific authentication and translation rules.
+- Allowing arbitrary TCP forwarding through Phemera. A worker connects only to the endpoint of the authorized asset.
 - Protecting session contents from a compromised public gateway for a transport that terminates there. Protocol gateways are trusted authenticators, while the session-gateway is a trusted ticket router and can see browser session traffic.
-- Defining the browser login-session credential. The authentication and API TEPs define its format and lifecycle. This TEP defines how the resulting admission ticket reaches the session-gateway without exposing that browser credential.
+- Defining the browser login-session credential. The authentication and API PEPs define its format and lifecycle. This PEP defines how the resulting admission ticket reaches the session-gateway without exposing that browser credential.
 - Defining high-availability or multi-region deployment topology.
 
 ## Proposal
@@ -145,15 +145,15 @@ The authority is the only component that decides whether a session may be create
 
 The session-gateway is a ticket-aware session router. It terminates public HTTPS and WebSocket connections, accepts admission tickets from CLI users, exchanges browser admission tickets for gateway-hosted cookies, performs preliminary ticket checks, selects workers, and relays session streams. It also accepts mutually authenticated tunnels from protocol gateways. Its local ticket check rejects malformed, expired, or misrouted requests early. Authoritative admission happens when the worker redeems the ticket with the authority.
 
-The ssh-gateway is the SSH server seen by native clients. It presents Tidegate's public SSH host identity, parses the logical asset and target login, verifies client public-key authentication, and requests the corresponding session from the authority. It translates allowed SSH connection-protocol messages into the framed session stream consumed by the SSH worker. The ssh-gateway sees commands, file-transfer data, and output for native SSH sessions.
+The ssh-gateway is the SSH server seen by native clients. It presents Phemera's public SSH host identity, parses the logical asset and target login, verifies client public-key authentication, and requests the corresponding session from the authority. It translates allowed SSH connection-protocol messages into the framed session stream consumed by the SSH worker. The ssh-gateway sees commands, file-transfer data, and output for native SSH sessions.
 
 The SSH worker owns the target side. It redeems the ticket, opens the recorder, verifies the target host identity, obtains a session credential, connects to the target, and maps the admitted session stream to target SSH channels. It holds the target credential only while it owns the session.
 
 ### User stories
 
-- A CLI user runs `tidegate connect deploy@web-01`. The CLI asks the authority for the exact session using its login token and an ephemeral SSH public key, then opens HTTPS `CONNECT` to the session-gateway with the returned admission ticket.
+- A CLI user runs `phemera connect deploy@web-01`. The CLI asks the authority for the exact session using its login token and an ephemeral SSH public key, then opens HTTPS `CONNECT` to the session-gateway with the returned admission ticket.
 - A user starts a terminal in the web UI. The browser uses its session credential with the authority to request the exact asset and login, exchanges the resulting admission ticket for a session-gateway cookie, and opens the WebSocket with that cookie.
-- A user runs a normal OpenSSH command against the Tidegate SSH endpoint. The ssh-gateway verifies the key signature, the authority resolves its registered owner and authorization, and Tidegate proxies the resulting SSH channels through the session-gateway and worker.
+- A user runs a normal OpenSSH command against the Phemera SSH endpoint. The ssh-gateway verifies the key signature, the authority resolves its registered owner and authorization, and Phemera proxies the resulting SSH channels through the session-gateway and worker.
 - An approver revokes a grant while a shell is open. The authority tells the session-gateway and worker to close the session. Lease expiry covers a missed notification.
 - A target presents an unapproved host key. The worker stops before credential issuance and records a target-identity failure.
 
@@ -161,7 +161,7 @@ The SSH worker owns the target side. It redeems the ticket, opens the recorder, 
 
 - A compromised ssh-gateway can request a session for any registered public key it knows. Public keys are not secrets, so requiring a key in the gRPC request limits the request to a real user and current authorization but does not prove that the user participated. Mutual TLS, method-level workload authorization, exact scope checks, rate limits, and audit reduce exposure. The future proof described below can require a fresh user signature.
 - A stolen CLI login token can be used against the authority's user API until it expires or is revoked. It never passes through the session-gateway. The default lifetime is bounded, the authority stores only a digest, logout revokes the login session, and every use is subject to current user state and authorization.
-- A stolen browser session credential can be used against the authority for as long as that credential remains valid. It never passes through the session-gateway. Its format, lifetime, and revocation behavior are defined by the authentication and API TEPs.
+- A stolen browser session credential can be used against the authority for as long as that credential remains valid. It never passes through the session-gateway. Its format, lifetime, and revocation behavior are defined by the authentication and API PEPs.
 - A stolen browser admission ticket can bootstrap its exact session before expiry. The ticket is short-lived and single-use, the gateway setup endpoint accepts it only from configured browser origins, and authoritative redemption still occurs once at the worker.
 - A stolen native admission ticket is usable only through the session-gateway endpoint, before expiry and redemption, from the gateway workload identity named by the ticket. The gateway-to-gateway `CONNECT` endpoint requires mutual TLS.
 - A compromised public gateway can read or alter sessions that terminate there. It still cannot obtain a target credential or choose a target address. The worker receives both from the authority and verifies target identity first.
@@ -210,19 +210,19 @@ The record contains no plaintext ticket, user credential, target credential, or 
 
 ### CLI login sessions
 
-After `tidegate login` authenticates a user, the authority creates a CLI login-session record and returns a cryptographically random opaque bearer token. The token contains at least 256 bits of entropy. The authority stores only a secure cryptographic digest suitable for indexed lookup, together with the user, authentication method, issue time, expiry time, and revocation state. It never stores the plaintext token.
+After `phemera login` authenticates a user, the authority creates a CLI login-session record and returns a cryptographically random opaque bearer token. The token contains at least 256 bits of entropy. The authority stores only a secure cryptographic digest suitable for indexed lookup, together with the user, authentication method, issue time, expiry time, and revocation state. It never stores the plaintext token.
 
-The token expires after a configurable absolute lifetime, 12 hours by default. Using it does not extend that lifetime. `tidegate logout` revokes the corresponding record, so later calls fail immediately; implementations may retain the revoked metadata for audit. Token validation and any state change it authorizes are committed atomically with respect to revocation: if logout commits first, the other operation fails, and if the other operation commits first, logout does not undo it. Logout prevents new API calls but does not end already admitted target sessions. User deactivation revokes every login session for that user and ends their live target sessions under the normal revocation rules.
+The token expires after a configurable absolute lifetime, 12 hours by default. Using it does not extend that lifetime. `phemera logout` revokes the corresponding record, so later calls fail immediately; implementations may retain the revoked metadata for audit. Token validation and any state change it authorizes are committed atomically with respect to revocation: if logout commits first, the other operation fails, and if the other operation commits first, logout does not undo it. Logout prevents new API calls but does not end already admitted target sessions. User deactivation revokes every login session for that user and ends their live target sessions under the normal revocation rules.
 
 The token is accepted only by the authority's user-facing API and is sent in protected authorization metadata over TLS. It is never sent to the session-gateway, embedded in an admission ticket, persisted by another component, or included in logs, traces, URLs, or audit records. Audit records identify the login session without recording its token or digest.
 
 ### Authority session APIs
 
-The CLI and browser call the authority's authenticated user-facing API. Gateways and workers call the internal authority API through gRPC over mutual TLS. A gateway's client certificate identifies its workload type and instance. Method-level authorization prevents one gateway type from using another gateway's session-creation operation and prevents any gateway from calling worker-only credential operations. A later API TEP defines the external and internal wire formats.
+The CLI and browser call the authority's authenticated user-facing API. Gateways and workers call the internal authority API through gRPC over mutual TLS. A gateway's client certificate identifies its workload type and instance. Method-level authorization prevents one gateway type from using another gateway's session-creation operation and prevents any gateway from calling worker-only credential operations. A later API PEP defines the external and internal wire formats.
 
 For CLI ingress, the user-facing session-creation operation receives the login token, exact asset, protocol, action, qualifier, stream kind, and optional client proof-of-possession key. The authority hashes the token, looks up an active and unexpired login-session record, checks that the user remains active, and derives the user from that record. It does not validate a signature on the opaque token and accepts no authoritative `subject` field. After checking the exact authorization, it creates the session and returns its admission ticket and session-gateway endpoint directly to the CLI.
 
-For browser ingress, the browser calls the user-facing session-creation operation with its browser session credential and the exact requested scope. The authority validates that credential, derives the user from it, checks authorization, and returns an admission ticket and session-gateway HTTPS setup endpoint directly to the browser. The request has no authoritative `subject` field. The browser credential's format and login lifecycle are outside this TEP.
+For browser ingress, the browser calls the user-facing session-creation operation with its browser session credential and the exact requested scope. The authority validates that credential, derives the user from it, checks authorization, and returns an admission ticket and session-gateway HTTPS setup endpoint directly to the browser. The request has no authoritative `subject` field. The browser credential's format and login lifecycle are outside this PEP.
 
 `CreateSSHSession` serves native SSH ingress. Its request contains:
 
@@ -231,7 +231,7 @@ For browser ingress, the browser calls the user-facing session-creation operatio
 - A unique gateway connection identifier used as an idempotency key.
 - The authenticated ssh-gateway instance from mutual TLS, supplied by the transport rather than the protobuf message.
 
-The authority parses and canonicalizes a public key, computes its fingerprint with an approved SSH fingerprint algorithm, and requires exactly one active user registration. For a Tidegate SSH user certificate, it validates the certificate authority, validity interval, critical options, and user principal before deriving the user. It then checks current authorization for the exact asset and login. It neither accepts a user ID from the gateway nor treats a gateway-computed fingerprint as proof of identity.
+The authority parses and canonicalizes a public key, computes its fingerprint with an approved SSH fingerprint algorithm, and requires exactly one active user registration. For a Phemera SSH user certificate, it validates the certificate authority, validity interval, critical options, and user principal before deriving the user. It then checks current authorization for the exact asset and login. It neither accepts a user ID from the gateway nor treats a gateway-computed fingerprint as proof of identity.
 
 An unsigned SSH public-key query does not call `CreateSSHSession`. The ssh-gateway first verifies the signed authentication request. It sends SSH authentication success only after the authority creates the session. Retries with the same gateway instance and connection identifier return the same result, so an uncertain gRPC response cannot create several sessions.
 
@@ -335,9 +335,9 @@ HTTP and gRPC logging middleware redact authorization metadata, cookies, request
 
 ### Native SSH flow
 
-The native client makes one SSH connection. The ssh-gateway terminates SSH and presents a stable host key or host certificate for the public Tidegate endpoint. Operators publish that identity with the endpoint.
+The native client makes one SSH connection. The ssh-gateway terminates SSH and presents a stable host key or host certificate for the public Phemera endpoint. Operators publish that identity with the endpoint.
 
-The SSH user name identifies the logical asset and target login. A registered public key identifies the Tidegate user, so the user name does not need a separate user identifier. The gateway rejects ambiguous selectors and returns the same generic failure for an unknown key, asset, login, or missing authorization.
+The SSH user name identifies the logical asset and target login. A registered public key identifies the Phemera user, so the user name does not need a separate user identifier. The gateway rejects ambiguous selectors and returns the same generic failure for an unknown key, asset, login, or missing authorization.
 
 ```mermaid
 sequenceDiagram
@@ -391,7 +391,7 @@ The following requests are denied:
 
 The ssh-gateway rejects these requests at the client boundary, and the worker rejects corresponding session events. An unrestricted shell can still run a tunnel program on the target. Target permissions and network egress policy enforce that separate boundary.
 
-Registered user keys are never installed on targets. Removing a key blocks new `CreateSSHSession` calls. Deactivating the user also ends live sessions. Deployments that require multi-factor authentication can require short-lived Tidegate SSH user certificates issued after an identity-provider login.
+Registered user keys are never installed on targets. Removing a key blocks new `CreateSSHSession` calls. Deactivating the user also ends live sessions. Deployments that require multi-factor authentication can require short-lived Phemera SSH user certificates issued after an identity-provider login.
 
 ### Future SSH client proof
 
@@ -420,7 +420,7 @@ The authority confirms that the session is still `preparing`, belongs to the cal
 
 Credential issuance is idempotent for the same session, worker, anchor, observation, and public key. A retry with different input fails and terminates the session. This prevents an uncertain RPC result from creating credentials for several worker keys.
 
-SSH certificates are preferred because they can carry a short expiry, target-scoped principals, and the session ID. A password or stored private key may be injected for a target that cannot trust a Tidegate CA. Those credentials can remain valid outside the session unless the target or provider rotates them, so operators treat them as a weaker compatibility mode.
+SSH certificates are preferred because they can carry a short expiry, target-scoped principals, and the session ID. A password or stored private key may be injected for a target that cannot trust a Phemera CA. Those credentials can remain valid outside the session unless the target or provider rotates them, so operators treat them as a weaker compatibility mode.
 
 Admission-ticket signing, mesh TLS, public gateway host identity, native user certificates, and target user certificates use separate keys and certificate-authority roles. Compromise of one signer does not grant another purpose.
 
@@ -432,7 +432,7 @@ The worker opens the required recording before requesting a target credential. T
 
 An SSH recording stores channel events with monotonic timestamps, direction, channel ID, event type, and payload. This supports terminal replay and preserves exec and file-transfer traffic without treating binary data as a terminal cast. Recording access is a separate audited capability because recordings can contain credentials typed into a shell and sensitive target data.
 
-The worker reports recording size, a cryptographic digest, status, and object identifier when the session ends. The authority appends that metadata to the session audit trail. The recording store uses retention controls or object immutability appropriate to the deployment, as described by [TEP-0004](../0004-scope-and-assumptions/README.md).
+The worker reports recording size, a cryptographic digest, status, and object identifier when the session ends. The authority appends that metadata to the session audit trail. The recording store uses retention controls or object immutability appropriate to the deployment, as described by [PEP-0004](../0004-scope-and-assumptions/README.md).
 
 The audit trail records at least:
 
@@ -480,7 +480,7 @@ Client errors remain generic where detail would reveal a user, key registration,
 
 ### Authority contracts
 
-The internal authority API uses gRPC over mutual TLS. The CLI and browser use the authenticated user-facing authority API. A later API TEP defines the external and internal protocols, packages, and messages; the operation names below are conceptual.
+The internal authority API uses gRPC over mutual TLS. The CLI and browser use the authenticated user-facing authority API. A later API PEP defines the external and internal protocols, packages, and messages; the operation names below are conceptual.
 
 | Operation | Caller | Result |
 |---|---|---|
@@ -503,11 +503,11 @@ The authority applies deadlines, request-size limits, idempotency, caller authen
 - Credentials and secrets. CLI login tokens are high-entropy opaque values stored only as digests by the authority, expire after a bounded lifetime, and can be revoked immediately. Browser login credentials also remain authority-only. Admission tickets are short-lived, single-use, and bound to the expected ingress where applicable. Browser cookies carry only admission tickets and are host-only, `Secure`, `HttpOnly`, path-scoped, and no longer-lived than the ticket. CLI tickets also use proof of possession. Target credentials go only to the owning worker after target verification.
 - Audit. State transitions and security decisions use the session ID. Ticket consumption and state transition share a transaction, so a crash cannot admit a session without a replay guard and audit record.
 - Failure behavior. New sessions fail closed when a required dependency is unavailable. Active sessions require renewable leases. Required recording failure ends the session. Termination messages are idempotent and backed by reconciliation.
-- Threat model. In scope are a malicious client, stolen user credential or ticket, compromised user key, network attacker, impostor target, compromised gateway, and compromised worker. A compromised authority, certificate authority, recording-store administrator, or worker host can defeat the controls it owns and remains an operator-level risk under TEP-0004.
+- Threat model. In scope are a malicious client, stolen user credential or ticket, compromised user key, network attacker, impostor target, compromised gateway, and compromised worker. A compromised authority, certificate authority, recording-store administrator, or worker host can defeat the controls it owns and remains an operator-level risk under PEP-0004.
 
 ## Compatibility and upgrade
 
-Tidegate has no released session protocol, so this TEP has no user-facing compatibility requirement. Native SSH uses a single ordinary SSH connection and requires no `ProxyJump` configuration or second Tidegate host identity.
+Phemera has no released session protocol, so this PEP has no user-facing compatibility requirement. Native SSH uses a single ordinary SSH connection and requires no `ProxyJump` configuration or second Phemera host identity.
 
 Admission tickets and session-stream preambles carry explicit versions. Gateways retain each verification key needed by an unexpired ticket. Workers advertise supported protocol, stream, and feature versions. A rolling upgrade keeps at least one mutually supported version between each connected component.
 
@@ -556,7 +556,7 @@ Stored password or private-key injection stays disabled by default until operato
 - The ssh-gateway is trusted with native client identity and plaintext. Its compromise can impersonate registered keys known to it within their current authorization.
 - Translating SSH channels into a worker stream adds a protocol boundary that must preserve flow control, request results, exit status, and backpressure.
 - Native sessions depend on both gateways and one worker. Loss of any component ends the connection.
-- Native clients verify the Tidegate ssh-gateway host identity. Tidegate, rather than the client, verifies the target host identity.
+- Native clients verify the Phemera ssh-gateway host identity. Phemera, rather than the client, verifies the target host identity.
 - Continuous authorization makes active sessions depend on the authority and its lease path.
 - Recording every supported channel adds storage and backpressure, especially for binary file transfers.
 - Load balancers and reverse proxies must support long-lived HTTP `CONNECT`, bidirectional streaming, backpressure, and tunnel closure without buffering.
@@ -587,10 +587,10 @@ The authority could release a target credential during preparation. The worker w
 - What SSH user-name grammar identifies the logical asset and target login without ambiguous escaping?
 - Which SSH channel events and error mappings make up version 1 of the gateway-worker stream?
 - Does the first native SSH release include SFTP and a binary recording format, or only shell and exec?
-- Are registered public keys enabled by default, or must users present short-lived Tidegate SSH certificates after identity-provider login?
+- Are registered public keys enabled by default, or must users present short-lived Phemera SSH certificates after identity-provider login?
 - Which HTTP versions are required for `CONNECT`, and may later versions multiplex session tunnels?
 - What lease duration and reconnect grace provide acceptable revocation latency during brief authority disruptions?
-- Which target credential compatibility modes are allowed when a target cannot trust Tidegate's SSH CA?
+- Which target credential compatibility modes are allowed when a target cannot trust Phemera's SSH CA?
 - Should a later release implement SSH transcript proof, and can the selected SSH library expose the exact signed fields without custom client behavior?
 
 ## Implementation history

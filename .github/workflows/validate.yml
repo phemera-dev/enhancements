@@ -1,4 +1,4 @@
-name: Validate TEPs
+name: Validate PEPs
 
 on:
   pull_request:
@@ -17,4 +17,4 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install pyyaml
-      - run: python scripts/validate-teps.py
+      - run: python scripts/validate-peps.py

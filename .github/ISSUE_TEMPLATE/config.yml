@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Report a security vulnerability
-    url: https://github.com/tidegate-dev/enhancements/security/advisories/new
-    about: Do not open a public issue or TEP for an unfixed vulnerability. Report it privately instead.
+    url: https://github.com/phemera-dev/enhancements/security/advisories/new
+    about: Do not open a public issue or PEP for an unfixed vulnerability. Report it privately instead.

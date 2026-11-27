@@ -1,13 +1,13 @@
-name: TEP tracking issue
-description: Propose a significant change to Tidegate and track its TEP.
-title: "TEP: "
-labels: ["tep"]
+name: PEP tracking issue
+description: Propose a significant change to Phemera and track its PEP.
+title: "PEP: "
+labels: ["pep"]
 body:
   - type: markdown
     attributes:
       value: |
-        Use this issue to describe the problem and gather early feedback before writing a full TEP.
-        See [TEP-0001](https://github.com/tidegate-dev/enhancements/blob/main/teps/0001-tep-process/README.md) for the process.
+        Use this issue to describe the problem and gather early feedback before writing a full PEP.
+        See [PEP-0001](https://github.com/phemera-dev/enhancements/blob/main/peps/0001-pep-process/README.md) for the process.
   - type: textarea
     id: problem
     attributes:
@@ -19,7 +19,7 @@ body:
     id: idea
     attributes:
       label: Proposed direction
-      description: A rough outline of the change. Details belong in the TEP.
+      description: A rough outline of the change. Details belong in the PEP.
     validations:
       required: true
   - type: textarea
@@ -30,7 +30,7 @@ body:
     validations:
       required: true
   - type: input
-    id: tep-pr
+    id: pep-pr
     attributes:
-      label: TEP pull request
-      description: Link the pull request once the TEP is written.
+      label: PEP pull request
+      description: Link the pull request once the PEP is written.
