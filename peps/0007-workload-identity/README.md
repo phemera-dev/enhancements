@@ -1,11 +1,11 @@
 ---
-tep: 0007
+pep: 0007
 title: Workload identity for the internal mesh
 status: draft
 authors:
   - "@The127"
 approvers:
-  - "@tidegate-dev/maintainers"
+  - "@phemera-dev/maintainers"
 tracking-issue: null
 created: 2026-11-18
 last-updated: 2026-11-18
@@ -13,21 +13,21 @@ replaces: []
 superseded-by: []
 ---
 
-# TEP-0007: Workload identity for the internal mesh
+# PEP-0007: Workload identity for the internal mesh
 
 ## Summary
 
-Tidegate's components talk to each other over mutual TLS. [TEP-0002](../0002-architecture/README.md) calls these connections the internal mesh. Each component has to prove which component it is, and [TEP-0005](../0005-gateway-sessions/README.md) builds on that. Neither TEP says where a component's certificate comes from. This TEP defines that.
+Phemera's components talk to each other over mutual TLS. [PEP-0002](../0002-architecture/README.md) calls these connections the internal mesh. Each component has to prove which component it is, and [PEP-0005](../0005-gateway-sessions/README.md) builds on that. Neither PEP says where a component's certificate comes from. This PEP defines that.
 
-A certificate carries one SPIFFE ID that names the installation and the component's type and instance. Every component checks that ID on every connection in the mesh. The operator chooses where the components get their certificates: from the authority, where each component joins once with a single-use token, or from SPIRE if they already run it. When the authority hands out the certificates, the operator also chooses what signs them: a CA that the authority keeps itself, or OpenBao. Nobody has to run a CA for Tidegate or sign a certificate by hand.
+A certificate carries one SPIFFE ID that names the installation and the component's type and instance. Every component checks that ID on every connection in the mesh. The operator chooses where the components get their certificates: from the authority, where each component joins once with a single-use token, or from SPIRE if they already run it. When the authority hands out the certificates, the operator also chooses what signs them: a CA that the authority keeps itself, or OpenBao. Nobody has to run a CA for Phemera or sign a certificate by hand.
 
 ## Motivation
 
-Nothing issues certificates to Tidegate's components yet, so the authority's internal API can't check who calls it. TEP-0002 says that each component has "a workload identity issued by one of the authority's certificate authorities". TEP-0005 relies on that identity when it lets only a worker redeem a ticket and only the right gateway create a session. No TEP says how the CA is created, how a new gateway or worker gets its first certificate, or what the certificate contains.
+Nothing issues certificates to Phemera's components yet, so the authority's internal API can't check who calls it. PEP-0002 says that each component has "a workload identity issued by one of the authority's certificate authorities". PEP-0005 relies on that identity when it lets only a worker redeem a ticket and only the right gateway create a session. No PEP says how the CA is created, how a new gateway or worker gets its first certificate, or what the certificate contains.
 
 The simplest answer is that every component reads its certificate from files the operator provides. The operator then has to run a CA and sign a certificate for every component by hand. Few operators will do that for one tool.
 
-Tidegate has to work in two kinds of installation. Some operators run it in Kubernetes and already have software that issues certificates. Others run it on servers that they set up by hand, without such software.
+Phemera has to work in two kinds of installation. Some operators run it in Kubernetes and already have software that issues certificates. Others run it on servers that they set up by hand, without such software.
 
 ### Goals
 
@@ -39,10 +39,10 @@ Tidegate has to work in two kinds of installation. Some operators run it in Kube
 ### Non-goals
 
 - The certificates that users see, like the authority's certificate for its user-facing API.
-- The authority's other keys. TEP-0005 keeps the key for admission tickets and the SSH CAs apart from mesh TLS.
-- Which type of component may call which method. TEP-0005 and the later API TEP decide that.
-- Agents. TEP-0002 places them in target networks, which must not reach the authority's internal API. A later TEP defines how an agent gets its identity.
-- A second way, built into Tidegate, to get certificates without a step for each component. SPIRE is that way.
+- The authority's other keys. PEP-0005 keeps the key for admission tickets and the SSH CAs apart from mesh TLS.
+- Which type of component may call which method. PEP-0005 and the later API PEP decide that.
+- Agents. PEP-0002 places them in target networks, which must not reach the authority's internal API. A later PEP defines how an agent gets its identity.
+- A second way, built into Phemera, to get certificates without a step for each component. SPIRE is that way.
 - Identities from more than one SPIFFE trust domain.
 
 ## Proposal
@@ -52,22 +52,22 @@ Tidegate has to work in two kinds of installation. Some operators run it in Kube
 A component's certificate carries one URI in its subject alternative names, a [SPIFFE ID](https://github.com/spiffe/spiffe/blob/main/standards/SPIFFE-ID.md). It names the installation and the component's type and instance:
 
 ```
-spiffe://tidegate.example.com/ssh-worker/5d2c9b0e
+spiffe://phemera.example.com/ssh-worker/5d2c9b0e
 ```
 
-In this example, `tidegate.example.com` is the installation, which SPIFFE calls the trust domain. `ssh-worker` is the type. `5d2c9b0e` is the instance, which tells two components of one type apart.
+In this example, `phemera.example.com` is the installation, which SPIFFE calls the trust domain. `ssh-worker` is the type. `5d2c9b0e` is the instance, which tells two components of one type apart.
 
-The part before the type is the same for all components of an installation. This TEP calls it the installation's ID prefix.
+The part before the type is the same for all components of an installation. This PEP calls it the installation's ID prefix.
 
-Tidegate uses the SPIFFE format for the name. It doesn't need other SPIFFE software for that.
+Phemera uses the SPIFFE format for the name. It doesn't need other SPIFFE software for that.
 
-A peer first verifies the certificate against the CA certificates it trusts. Then it checks this ID. A component that connects to a worker checks that the certificate names the worker instance it expects. TEP-0005 requires such a check: "A DNS name or network location alone is insufficient." Tidegate checks no host name at all, and a certificate needs no DNS names.
+A peer first verifies the certificate against the CA certificates it trusts. Then it checks this ID. A component that connects to a worker checks that the certificate names the worker instance it expects. PEP-0005 requires such a check: "A DNS name or network location alone is insufficient." Phemera checks no host name at all, and a certificate needs no DNS names.
 
 A component has one certificate. It uses it as a client and as a server, because a worker accepts connections from a gateway and opens connections to the authority.
 
 ### Where certificates come from
 
-The operator makes two choices. The second choice only exists when the certificates come from the authority. This TEP calls the software that signs those certificates the signer.
+The operator makes two choices. The second choice only exists when the certificates come from the authority. This PEP calls the software that signs those certificates the signer.
 
 ```mermaid
 flowchart TB
@@ -130,28 +130,28 @@ sequenceDiagram
     participant Ag as SPIRE agent
     participant C as Component
 
-    SA->>SS: Register the workload as a Tidegate component
+    SA->>SS: Register the workload as a Phemera component
     SS->>Ag: Registration entries
     C->>Ag: Ask for its identity
     Ag->>Ag: Check the process or Pod
     Ag-->>C: Certificate and the CA certificates to trust
 ```
 
-With SPIRE, more people can create a Tidegate component. Everyone who can register a workload in SPIRE's trust domain can create an identity that Tidegate accepts as a worker or as the authority. So can everyone who can start a workload that matches one of Tidegate's registrations. A worker receives credentials for targets. With certificates from the authority, only a Tidegate administrator can create a component.
+With SPIRE, more people can create a Phemera component. Everyone who can register a workload in SPIRE's trust domain can create an identity that Phemera accepts as a worker or as the authority. So can everyone who can start a workload that matches one of Phemera's registrations. A worker receives credentials for targets. With certificates from the authority, only a Phemera administrator can create a component.
 
 ### User stories
 
 - An operator installs the authority, a gateway and a worker on three servers by hand. They create a token for the gateway and one for the worker with the CLI, and each component fetches its certificate when it starts.
-- An operator who runs OpenBao sets up a PKI there for Tidegate and gives the authority the public certificate of its CA. The CA key stays in OpenBao, and components still join with tokens.
-- An operator who runs SPIRE registers the Tidegate components as workloads. No tokens exist in that installation.
+- An operator who runs OpenBao sets up a PKI there for Phemera and gives the authority the public certificate of its CA. The CA key stays in OpenBao, and components still join with tokens.
+- An operator who runs SPIRE registers the Phemera components as workloads. No tokens exist in that installation.
 
 ### Risks and mitigations
 
-- A signer that is set up too openly lets someone other than the authority get a certificate with one of this installation's IDs. This TEP states the conditions for each signer, the authority checks every certificate that a signer returns, and on its own API it only accepts the certificates that it handed out.
+- A signer that is set up too openly lets someone other than the authority get a certificate with one of this installation's IDs. This PEP states the conditions for each signer, the authority checks every certificate that a signer returns, and on its own API it only accepts the certificates that it handed out.
 - A join token leaks before it's used. It works once and expires after an hour by default. If someone else uses it first, the real component fails to join, and the authority records the second attempt as an event of its own.
 - Someone copies a component's key. The authority only renews the latest certificate of a component, so the copy and the real component can't both keep renewing. When the second one tries, the authority removes the component, and both stop.
 - The authority or the signer is down for longer than a certificate is valid. Components can't renew, and the mesh stops. Components renew at half of the lifetime, and the operator can choose longer lifetimes.
-- With SPIRE, the group of people who can create a component is as large as the group that can register workloads in the trust domain. An operator for whom that group is too large runs a trust domain for Tidegate alone.
+- With SPIRE, the group of people who can create a component is as large as the group that can register workloads in the trust domain. An operator for whom that group is too large runs a trust domain for Phemera alone.
 
 ## Design details
 
@@ -177,28 +177,28 @@ A component's ID is the installation's ID prefix, the type and the instance:
 
 When the authority hands out the certificates, the prefix is `spiffe://` followed by the installation's name. The operator sets the name on the authority. It consists of lowercase letters, digits, dots, dashes and underscores, as SPIFFE requires for a trust domain. It has no default, because two installations that share a signer and a name would accept each other's components.
 
-With SPIRE, the trust domain belongs to SPIRE and often holds other workloads, so the prefix also has a path, like `spiffe://example.org/tidegate`.
+With SPIRE, the trust domain belongs to SPIRE and often holds other workloads, so the prefix also has a path, like `spiffe://example.org/phemera`.
 
 The types are:
 
 | Type | Component |
 |---|---|
 | `authority` | The authority |
-| `session-gateway` | The session-gateway of TEP-0005 |
-| `ssh-gateway` | The ssh-gateway of TEP-0005 |
-| `ssh-worker` | The SSH worker of TEP-0005 |
+| `session-gateway` | The session-gateway of PEP-0005 |
+| `ssh-gateway` | The ssh-gateway of PEP-0005 |
+| `ssh-worker` | The SSH worker of PEP-0005 |
 
-A TEP that adds a component adds its type.
+A PEP that adds a component adds its type.
 
 The instance is one path segment of letters, digits, dots, dashes and underscores. It isn't `.` or `..`. It's unique among the components of one type.
 
-A component parses an ID by the rules of the SPIFFE standard and compares it part by part: the trust domain as a whole, and the path segment by segment. It refuses an ID with a port, a query, a fragment or percent-encoding. It never compares the ID as a string that starts with the prefix, because `spiffe://tidegate.example.com.other/...` starts with `spiffe://tidegate.example.com` too.
+A component parses an ID by the rules of the SPIFFE standard and compares it part by part: the trust domain as a whole, and the path segment by segment. It refuses an ID with a port, a query, a fragment or percent-encoding. It never compares the ID as a string that starts with the prefix, because `spiffe://phemera.example.com.other/...` starts with `spiffe://phemera.example.com` too.
 
 ### Accepting a certificate
 
 A peer accepts a certificate only if all of this holds:
 
-1. The certificate was signed by a CA on the peer's list of trusted CA certificates, directly or through certificates in between, and every certificate on that path is within its validity. This TEP says that such a certificate leads to that CA certificate.
+1. The certificate was signed by a CA on the peer's list of trusted CA certificates, directly or through certificates in between, and every certificate on that path is within its validity. This PEP says that such a certificate leads to that CA certificate.
 2. The certificate meets the rules under "The certificate". A certificate that could sign other certificates is refused.
 3. Its one URI is the installation's ID prefix followed by exactly two path segments.
 4. The first segment is the type that the peer expects on this connection.
@@ -208,7 +208,7 @@ These checks take the place of the host name check that TLS libraries do by defa
 
 A component closes a connection in the mesh when the other side's certificate expires, at the latest. A session runs over one connection between a session-gateway and a worker. It therefore ends when one of the two certificates expires that the connection started with. With the default lifetime, that's after 12 to 24 hours.
 
-Each connection in TEP-0005 expects these types:
+Each connection in PEP-0005 expects these types:
 
 | Connection | The side that connects expects | The side that accepts expects |
 |---|---|---|
@@ -238,13 +238,13 @@ With SPIRE, every component gets the list from the SPIRE agent, together with it
 
 ### Component records
 
-The authority keeps a record of every component: its ID, how it got its certificate, when its token was created, when it joined, when it last renewed, which certificate it got last, and whether an administrator removed it. TEP-0003 has the authority record every change to a resource in the audit log, and that covers these records.
+The authority keeps a record of every component: its ID, how it got its certificate, when its token was created, when it joined, when it last renewed, which certificate it got last, and whether an administrator removed it. PEP-0003 has the authority record every change to a resource in the audit log, and that covers these records.
 
 When the authority hands out the certificates, a caller on its internal API has to show the certificate that its record names, or the one before it while that one is valid. The authority refuses every other certificate, also one with the ID of a component that exists, and it refuses a removed component. A certificate that someone got from the signer directly is refused that way.
 
 With SPIRE, the authority creates the record when it first sees an ID, and refuses a removed component.
 
-Each ID belongs to one running component. This TEP doesn't define how the authority notices two running components with one ID.
+Each ID belongs to one running component. This PEP doesn't define how the authority notices two running components with one ID.
 
 ### Joining through the authority
 
@@ -260,9 +260,9 @@ A token:
 - contains the ID of the component it's for
 - contains a fingerprint for each CA certificate on the authority's list, the SHA-256 hash of the CA's public key
 
-The authority stores only a digest of the secret part. TEP-0005 stores login tokens the same way.
+The authority stores only a digest of the secret part. PEP-0005 stores login tokens the same way.
 
-Creating a join token needs an organization permission of its own, in the sense of TEP-0003, because a token creates a component that can receive credentials for targets or ask for sessions.
+Creating a join token needs an organization permission of its own, in the sense of PEP-0003, because a token creates a component that can receive credentials for targets or ask for sessions.
 
 #### The join call
 
@@ -320,10 +320,10 @@ An administrator removes a component with the CLI. That needs a permission of it
 
 - refuses the component's calls and doesn't renew its certificate
 - makes its join token invalid if the component hasn't joined yet
-- closes its open streams to the authority, which TEP-0005 defines
-- ends its sessions and takes it off the worker roster that TEP-0005 describes
+- closes its open streams to the authority, which PEP-0005 defines
+- ends its sessions and takes it off the worker roster that PEP-0005 describes
 
-Other components can't see the record. Between a gateway and a worker, a removed component's certificate works until it expires. A removed worker gets no new sessions, because a gateway only connects to workers that the authority lists. A removed session-gateway is different: workers still accept its tunnels until its certificate expires, and it can read what TEP-0005 lets a session-gateway read, like the traffic of browser sessions.
+Other components can't see the record. Between a gateway and a worker, a removed component's certificate works until it expires. A removed worker gets no new sessions, because a gateway only connects to workers that the authority lists. A removed session-gateway is different: workers still accept its tunnels until its certificate expires, and it can read what PEP-0005 lets a session-gateway read, like the traffic of browser sessions.
 
 #### Replacing the CA
 
@@ -378,7 +378,7 @@ The authority's access to its signer is as powerful as the CA key itself. Whoeve
 
 #### The CA that the authority keeps
 
-On its first start, the authority creates a CA key and a CA certificate, stores both in Postgres and puts the certificate on its list. The key is encrypted in Postgres, as TEP-0002 requires, and never leaves the authority. The CA can only sign components' certificates, not other CAs.
+On its first start, the authority creates a CA key and a CA certificate, stores both in Postgres and puts the certificate on its list. The key is encrypted in Postgres, as PEP-0002 requires, and never leaves the authority. The CA can only sign components' certificates, not other CAs.
 
 This signer needs no other software. It's the one for servers set up by hand.
 
@@ -388,7 +388,7 @@ The authority sends each request to OpenBao's PKI and gets the certificate back.
 
 The operator sets it up like this:
 
-- A PKI in OpenBao that is used for this Tidegate installation and nothing else.
+- A PKI in OpenBao that is used for this Phemera installation and nothing else.
 - A role in it that only allows URI names under the installation's ID prefix, no other names, no CA certificates, and no lifetime above the one set on the authority.
 - Access for the authority that allows signing a request with that role and nothing else. It doesn't allow signing without a role, creating keys or signing CA certificates.
 - The public certificate of that CA in a file that the authority's settings name. The authority reads it at its first start. Later changes to the list go through an administrator.
@@ -405,9 +405,9 @@ In such an installation:
 - The internal API refuses every connection without a client certificate.
 - No signer is configured, and the authority keeps no list of trusted CA certificates.
 
-The operator registers each Tidegate component in SPIRE with an ID in the format above. Every component, the authority included, is configured with the same ID prefix and only accepts IDs under it.
+The operator registers each Phemera component in SPIRE with an ID in the format above. Every component, the authority included, is configured with the same ID prefix and only accepts IDs under it.
 
-The prefix only keeps another workload from being taken for a Tidegate component by mistake. It doesn't stop anyone who registers a workload under it on purpose. SPIRE has no permission that is limited to a part of the trust domain, so everyone who can register a workload there can register one under Tidegate's prefix. An operator who doesn't want that runs a SPIRE trust domain for Tidegate alone.
+The prefix only keeps another workload from being taken for a Phemera component by mistake. It doesn't stop anyone who registers a workload under it on purpose. SPIRE has no permission that is limited to a part of the trust domain, so everyone who can register a workload there can register one under Phemera's prefix. An operator who doesn't want that runs a SPIRE trust domain for Phemera alone.
 
 SPIRE has to issue one ID for each instance, not one for all instances of a type. On a server, that's one registration per component. In Kubernetes, SPIRE's controller can build the ID from a template that contains the Pod's name. A Pod's name is only unique within its namespace, so all Pods of one type run in one namespace, or the template uses the namespace too.
 
@@ -415,7 +415,7 @@ An administrator can remove a component at the authority, which then refuses its
 
 SPIRE renews the certificates and replaces its own CA by itself. If SPIRE gets its CA from another CA, replacing that one is the operator's task in SPIRE.
 
-Tidegate doesn't use SPIFFE federation. It only accepts IDs from one trust domain.
+Phemera doesn't use SPIFFE federation. It only accepts IDs from one trust domain.
 
 ### The authority's own start
 
@@ -450,7 +450,7 @@ With OpenBao, one step comes first: set up the PKI, the role and the authority's
 
 In Kubernetes with SPIRE:
 
-1. Register the Tidegate components in SPIRE under one ID prefix.
+1. Register the Phemera components in SPIRE under one ID prefix.
 2. Set that prefix and the SPIRE agent's socket on every component.
 
 New Pods get their certificates without a further step.
@@ -477,31 +477,31 @@ With certificates from the authority, a gateway or a worker learns the ID prefix
 
 ## Security considerations
 
-- Trust boundaries. When the authority hands out certificates, it decides alone who is a component. With OpenBao, the PKI there and everyone who can change it or sign with it can create a component too. With SPIRE, the decision moves to SPIRE: the SPIRE server, a CA above it, everyone who can register workloads in the trust domain and everyone who can start a workload that matches a registration can create a component of any type, the authority included. A SPIRE agent that is taken over can get the identities of all workloads registered for its host. These parts join the ones that [TEP-0004](../0004-scope-and-assumptions/README.md) names as trusted, and restricting them is the operator's responsibility.
-- Privilege. An identity of the type `ssh-worker` can receive credentials for targets, and one of the type `ssh-gateway` can ask for a session as any user whose public key it knows, both within the limits of TEP-0005. Creating a join token, removing a component, changing the list of trusted CA certificates and replacing the CA each need a permission of their own. A token is bound to one type and one instance, and never to the type `authority`. A component can't choose its type or its instance. An identity isn't limited to a part of the targets: every `ssh-worker` can offer itself for every session.
-- Credentials and secrets. A join token is shown once, stored as a digest and never logged. With certificates from the authority, a component's private key is created on that component, stays there, is readable only by its user and is replaced at every renewal. With SPIRE, the SPIRE agent creates the key. The authority's own key exists only in memory. When the authority keeps the CA, its key is encrypted in Postgres, and whatever decrypts it is as powerful as the key. With OpenBao, the CA key isn't in Tidegate, but the authority's access to OpenBao can create any identity of the installation.
+- Trust boundaries. When the authority hands out certificates, it decides alone who is a component. With OpenBao, the PKI there and everyone who can change it or sign with it can create a component too. With SPIRE, the decision moves to SPIRE: the SPIRE server, a CA above it, everyone who can register workloads in the trust domain and everyone who can start a workload that matches a registration can create a component of any type, the authority included. A SPIRE agent that is taken over can get the identities of all workloads registered for its host. These parts join the ones that [PEP-0004](../0004-scope-and-assumptions/README.md) names as trusted, and restricting them is the operator's responsibility.
+- Privilege. An identity of the type `ssh-worker` can receive credentials for targets, and one of the type `ssh-gateway` can ask for a session as any user whose public key it knows, both within the limits of PEP-0005. Creating a join token, removing a component, changing the list of trusted CA certificates and replacing the CA each need a permission of their own. A token is bound to one type and one instance, and never to the type `authority`. A component can't choose its type or its instance. An identity isn't limited to a part of the targets: every `ssh-worker` can offer itself for every session.
+- Credentials and secrets. A join token is shown once, stored as a digest and never logged. With certificates from the authority, a component's private key is created on that component, stays there, is readable only by its user and is replaced at every renewal. With SPIRE, the SPIRE agent creates the key. The authority's own key exists only in memory. When the authority keeps the CA, its key is encrypted in Postgres, and whatever decrypts it is as powerful as the key. With OpenBao, the CA key isn't in Phemera, but the authority's access to OpenBao can create any identity of the installation.
 - Audit. The authority records the creation and the use of a join token and every refused use of one that exists, every certificate that it had signed with its ID and lifetime, a renewal with an older certificate, every removed component and whether an administrator or the authority removed it, every change to the list of trusted CA certificates and each step when the CA is replaced. With SPIRE, it records the first time it sees an ID.
 - Failure behavior. Every failure ends in a refusal. Without the signer, nobody joins or renews. Without the authority, nobody renews. Without the SPIRE agent, a component gets no new certificate. In each case the existing certificates work until they expire, and then the components refuse each other. An expired certificate is never accepted, and a connection doesn't outlive the certificate it was opened with.
-- Threat model. Every connection in the mesh uses mutual TLS, so a network attacker can neither read nor change it. A joining component sends its token only to a server that shows an `authority` certificate of the right installation, signed by a CA that the token names. A stolen join token has to be used before it expires. Whoever uses it first holds an identity that lasts until an administrator removes it, and the real component's failed join is the sign of it. A stolen component key works until the component is removed. The authority removes it by itself as soon as the copy and the real component have both tried to renew. A removed component's certificate still works between a gateway and a worker until it expires. An authority replica's stolen key works for as long as that replica's certificate is valid, one hour by default. A compromised gateway or worker can't create identities, because no component's certificate can sign another one. An administrator who may create join tokens can create a worker, which the audit log shows. A compromised authority, signer, CA or SPIRE server can create any identity. That remains an operator-level risk, as in TEP-0005.
+- Threat model. Every connection in the mesh uses mutual TLS, so a network attacker can neither read nor change it. A joining component sends its token only to a server that shows an `authority` certificate of the right installation, signed by a CA that the token names. A stolen join token has to be used before it expires. Whoever uses it first holds an identity that lasts until an administrator removes it, and the real component's failed join is the sign of it. A stolen component key works until the component is removed. The authority removes it by itself as soon as the copy and the real component have both tried to renew. A removed component's certificate still works between a gateway and a worker until it expires. An authority replica's stolen key works for as long as that replica's certificate is valid, one hour by default. A compromised gateway or worker can't create identities, because no component's certificate can sign another one. An administrator who may create join tokens can create a worker, which the audit log shows. A compromised authority, signer, CA or SPIRE server can create any identity. That remains an operator-level risk, as in PEP-0005.
 
 Joining is the one method of the internal API that answers a caller without a certificate. It takes a request of limited size, does one lookup, gives every failure the same answer and limits how often one address may call it.
 
 ## Compatibility and upgrade
 
-No version of Tidegate has been released, so no installation has to be migrated.
+No version of Phemera has been released, so no installation has to be migrated.
 
-This TEP changes four statements of TEP-0002:
+This PEP changes four statements of PEP-0002:
 
 - "Each component has a workload identity issued by one of the authority's certificate authorities." With SPIRE, SPIRE issues it. With OpenBao, OpenBao's CA signs it.
 - "Mesh identities are short-lived certificates issued by the authority." The same applies.
 - The authority is "the only one with access to Postgres, stored secrets, and certificate authorities". With OpenBao or SPIRE, the CA for the mesh is outside the authority.
 - "Stored secrets and CA keys are encrypted at rest in Postgres." The key of the CA for the mesh is only in Postgres when the authority keeps that CA.
 
-It adds to TEP-0004's assumptions: an operator who uses OpenBao or SPIRE has to restrict them as "Security considerations" describes.
+It adds to PEP-0004's assumptions: an operator who uses OpenBao or SPIRE has to restrict them as "Security considerations" describes.
 
 The authority gets the certificate for its internal API like every other component. The settings for the files that hold it today go away.
 
-An installation can't change where its certificates come from, or its signer, while it runs. Every component needs a new certificate after such a change, and this TEP defines no gradual way.
+An installation can't change where its certificates come from, or its signer, while it runs. Every component needs a new certificate after such a change, and this PEP defines no gradual way.
 
 ## Test plan
 
@@ -530,7 +530,7 @@ Steps 1 and 2 are part of the first version in which components talk to each oth
 - OpenBao as a signer brings a client for OpenBao into the authority, and SPIRE brings the SPIFFE library into every component.
 - Joining with a token takes a person or the operator's own automation, and a component that loses its key needs a new token. In Kubernetes that means persistent volumes or SPIRE.
 - When the authority hands out certificates, every component depends on it for renewal. An outage that lasts longer than a certificate is valid stops the mesh.
-- With SPIRE, Tidegate trusts everyone who can register workloads there with the decision who is a worker.
+- With SPIRE, Phemera trusts everyone who can register workloads there with the decision who is a worker.
 - A component that is restored from a backup is removed at its next renewal and has to join again.
 - A session ends when the certificates of its connection expire, after 12 to 24 hours with the default lifetime.
 
@@ -550,14 +550,14 @@ Steps 1 and 2 are part of the first version in which components talk to each oth
 
 ## Unresolved questions
 
-- What encrypts the CA key in Postgres when the authority keeps the CA? The SSH CAs and the key for admission tickets of TEP-0005 need the same answer. That may be a TEP of its own, and step 1 of the rollout waits for it.
-- What are the type names? TEP-0002 says web-gateway and ssh-proxy, TEP-0005 says session-gateway and SSH worker. The table of types uses TEP-0005's.
+- What encrypts the CA key in Postgres when the authority keeps the CA? The SSH CAs and the key for admission tickets of PEP-0005 need the same answer. That may be a PEP of its own, and step 1 of the rollout waits for it.
+- What are the type names? PEP-0002 says web-gateway and ssh-proxy, PEP-0005 says session-gateway and SSH worker. The table of types uses PEP-0005's.
 - Are 24 hours for a certificate, one hour for a join token and one hour for the authority's own certificate the right defaults, and seven days the right upper limit?
-- How does the authority notice two running components with one ID? It would show in the streams that TEP-0005 defines.
-- Do TEP-0005's leases hold when gateways and workers have to open their streams to the authority again at least once an hour?
-- Should a worker refuse a removed session-gateway before its certificate expires? TEP-0005 would have to let the worker tell the authority which gateway carried a session.
-- Should a join token bind a worker to a part of the targets? TEP-0005 lets a worker say itself what it can reach.
-- How does an operator's automation sign in to create join tokens? TEP-0003 names service accounts as users, but no TEP says how one signs in.
+- How does the authority notice two running components with one ID? It would show in the streams that PEP-0005 defines.
+- Do PEP-0005's leases hold when gateways and workers have to open their streams to the authority again at least once an hour?
+- Should a worker refuse a removed session-gateway before its certificate expires? PEP-0005 would have to let the worker tell the authority which gateway carried a session.
+- Should a join token bind a worker to a part of the targets? PEP-0005 lets a worker say itself what it can reach.
+- How does an operator's automation sign in to create join tokens? PEP-0003 names service accounts as users, but no PEP says how one signs in.
 - Can every common way to run SPIRE issue one ID per instance, also for Pods that scale by themselves?
 
 ## Implementation history
